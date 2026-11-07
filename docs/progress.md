@@ -4,7 +4,7 @@
 - [x] Environment on O: (Python 3.13, venv, packages verified)
 - [x] Project skeleton created
 - [x] docs/scope.md written
-- [ ] First commit pushed to GitHub
+- [x] First commit pushed to GitHub
 
 ## Phase 1: Data and pipeline  (GATE: load data, build one safe feature, retrieve it correctly)
 - [ ] Download NYC TLC data, data dictionary
