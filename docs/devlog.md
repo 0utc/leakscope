@@ -41,3 +41,20 @@
   (7-day warm-up for lookback features); history for aggregates uses ALL clean trips, as a live system would.
 - Verified: clock ordering holds; a trip's own outcome fields are 100% unavailable at its t_pred;
   pickup fields are usable at the boundary (<=), unusable with strict <.
+
+## 2026-11-07 (continued 4)
+- Temporal model verified: clock ordering OK; own outcome fields 100% unavailable at t_pred.
+- Spec fixes in scope.md: L1 now uses a mislabeled (optimistic) timestamp so only R3 catches it;
+  L3 expects R2+R3; L6 reclassified R2 -> R4 (aggregate over in-progress trips); N3 window is
+  (t_pred - 7d, t_pred] to be consistent with <=. Scenarios can trigger multiple rules.
+- Built configs/features.yaml (feature registry, 11 features) and registry.py with validation.
+- Built zone_cum (running totals per zone by availability time) for fast point-in-time lookups,
+  zone_global and row_features (valid + leaky row-level features).
+- Correlations with target:
+┌───────────────┬──────────────┬───────────────────┬──────────────────┬─────────────────┬───────────────┐
+│ r_pickup_hour │ r_passengers │ r_leak_dropoff_hr │ r_leak_zone_glob │ r_leak_distance │ r_leak_amount │
+│    double     │    double    │      double       │      double      │     double      │    double     │
+├───────────────┼──────────────┼───────────────────┼──────────────────┼─────────────────┼───────────────┤
+│        -0.012 │        0.011 │             0.001 │            0.535 │           0.774 │         0.748 │
+└───────────────┴──────────────┴───────────────────┴──────────────────┴─────────────────┴───────────────┘
+

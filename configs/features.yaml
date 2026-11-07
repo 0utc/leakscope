@@ -1,0 +1,111 @@
+features:
+  # ---------- Valid features (negative controls) ----------
+  - name: pickup_hour
+    kind: row
+    scenario: N1
+    source: "prediction_examples.t_pred"
+    transformation: "hour(t_pred)"
+    event_time: event_pickup
+    availability_time: avail_pickup
+    declared_post_outcome: false
+
+  - name: pickup_dow
+    kind: row
+    scenario: N1
+    source: "prediction_examples.t_pred"
+    transformation: "dayofweek(t_pred)"
+    event_time: event_pickup
+    availability_time: avail_pickup
+    declared_post_outcome: false
+
+  - name: pu_zone
+    kind: row
+    scenario: N1
+    source: "clean_trips.PULocationID"
+    transformation: "identity"
+    event_time: event_pickup
+    availability_time: avail_pickup
+    declared_post_outcome: false
+
+  - name: passenger_count_filled
+    kind: row
+    scenario: N1
+    source: "clean_trips.passenger_count"
+    transformation: "coalesce(passenger_count, 1)  [constant fill, no fitted statistics]"
+    event_time: event_pickup
+    availability_time: avail_pickup
+    declared_post_outcome: false
+
+  - name: passenger_missing
+    kind: row
+    scenario: N1
+    source: "clean_trips.passenger_count"
+    transformation: "passenger_count IS NULL"
+    event_time: event_pickup
+    availability_time: avail_pickup
+    declared_post_outcome: false
+
+  - name: zone_avg_dur_asof
+    kind: aggregate
+    scenario: N2
+    source: "zone_cum"
+    transformation: "mean duration_min of same-zone trips with avail_dropoff <= t_pred"
+    event_time: event_dropoff
+    availability_time: avail_dropoff
+    declared_post_outcome: false
+    group_by: pu_zone
+    window: up_to_t_pred
+    includes_current_row: false
+
+  - name: zone_avg_dur_7d
+    kind: aggregate
+    scenario: N3
+    source: "zone_cum"
+    transformation: "mean duration_min of same-zone trips with avail_dropoff in (t_pred - 7d, t_pred]"
+    event_time: event_dropoff
+    availability_time: avail_dropoff
+    declared_post_outcome: false
+    group_by: pu_zone
+    window: lookback
+    lookback_days: 7
+    includes_current_row: false
+
+  # ---------- Intentionally leaky features ----------
+  - name: leak_trip_distance
+    kind: row
+    scenario: L1
+    source: "clean_trips.trip_distance"
+    transformation: "identity"
+    event_time: event_dropoff
+    availability_time: avail_pickup      # WRONG ON PURPOSE: optimistic metadata
+    declared_post_outcome: true
+
+  - name: leak_total_amount
+    kind: row
+    scenario: L2
+    source: "clean_trips.total_amount"
+    transformation: "identity"
+    event_time: event_dropoff
+    availability_time: avail_fare
+    declared_post_outcome: false
+
+  - name: leak_dropoff_hour
+    kind: row
+    scenario: L3
+    source: "clean_trips.tpep_dropoff_datetime"
+    transformation: "hour(dropoff time)"
+    event_time: event_dropoff
+    availability_time: avail_dropoff
+    declared_post_outcome: true
+
+  - name: leak_zone_avg_global
+    kind: aggregate
+    scenario: L4
+    source: "zone_global"
+    transformation: "mean duration_min of ALL clean trips in the same zone"
+    event_time: event_dropoff
+    availability_time: avail_dropoff
+    declared_post_outcome: false
+    group_by: pu_zone
+    window: whole_dataset
+    includes_current_row: true

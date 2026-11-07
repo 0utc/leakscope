@@ -10,7 +10,7 @@
 - [x] Download NYC TLC data, data dictionary
 - [x] DuckDB ingestion + cleaning
 - [x] Temporal data model (simulated availability times)
-- [ ] Feature tables (safe + intentionally leaky)
+- [x] Feature tables (safe + intentionally leaky)(aggregates N2/N3 computed in the point-in-time join step)
 - [ ] Point-in-time SQL join
 - [ ] First end-to-end pipeline + correctness tests
 

@@ -42,23 +42,24 @@ is <= t_pred, within a lookback window.
 
 ## 6. Test scenarios (known expected outcomes)
 Leaky scenarios (the auditor MUST flag these):
-| ID | Scenario                                                              | Rule |
+| ID | Scenario                                                              | Expected rules |
 |----|-----------------------------------------------------------------------|------|
-| L1 | Final trip_distance used as a feature                                 | R3   |
+| L1 | Final trip_distance used as a feature, but the registry gives it a wrong, optimistic availability timestamp                                 | R3   |
 | L2 | Final fare amount used as a feature                                   | R2   |
-| L3 | Feature derived from the dropoff time (e.g. dropoff hour)             | R3   |
+| L3 | Feature derived from the dropoff time (e.g. dropoff hour)             | R2 + R3   |
 | L4 | Zone average duration over the whole dataset (includes the future)    | R4   |
 | L5 | Rolling average that includes the current trip itself                 | R4   |
-| L6 | Rolling average including trips still in progress at t_pred           | R2   |
+| L6 | Rolling average including trips still in progress at t_pred           | R4   |
 | L7 | Next-day fare correction used at prediction time                      | R2   |
 | L8 | Non-point-in-time join: feature snapshot taken after t_pred           | R1   |
+A scenario may trigger several rules. Each scenario’s expected outcome is its full set of rules.
 
 Negative controls (the auditor MUST NOT flag these):
 | ID | Scenario                                                       |
 |----|----------------------------------------------------------------|
 | N1 | Pickup hour, day of week, zone, passenger count                |
 | N2 | Zone average using only trips with availability time <= t_pred |
-| N3 | 7-day lookback average ending strictly before t_pred           |
+| N3 | 7-day lookback average over trips whose availability time is in (t_pred − 7 days, t_pred]           |
 | N4 | Boundary case: a source trip available at exactly t_pred       |
 
 ## 7. Explicit limitations
