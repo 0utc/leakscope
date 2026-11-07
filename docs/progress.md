@@ -10,13 +10,15 @@
 - [x] Download NYC TLC data, data dictionary
 - [x] DuckDB ingestion + cleaning
 - [x] Temporal data model (simulated availability times)
-- [x] Feature tables (safe + intentionally leaky)(aggregates N2/N3 computed in the point-in-time join step)
-- [ ] Point-in-time SQL join
-- [ ] First end-to-end pipeline + correctness tests
+- [x] Feature registry (configs/features.yaml + registry.py validation)
+- [x] Feature tables (safe + intentionally leaky); aggregates N2/N3 computed in the point-in-time join step
+- [x] Point-in-time SQL join
+- [x] First end-to-end pipeline + correctness tests
 
 ## Phase 2: Auditor  (GATE: catches all leaky scenarios, ignores all negative controls)
 - [ ] Rules R1-R4 implemented
 - [ ] Provenance / feature-dependency checks
+- [ ] Deliberately wrong joins for L5-L8 (self-inclusion, in-progress trips, fare correction, post-t_pred snapshot)
 - [ ] 12 scenario fixtures (8 leaky, 4 negative)
 - [ ] Positive/negative test suite
 

@@ -8,20 +8,23 @@ row_features: one row per prediction example with safe and leaky row-level
 """
 from leakscope.ingestion import connect, load_config
 
+def create_zone_cum(con):
+    """Running totals per zone ordered by availability time."""
+    con.execute("DROP TABLE IF EXISTS zone_cum")
+    con.execute("""
+        CREATE TABLE zone_cum AS
+        SELECT pu_zone,
+               avail_dropoff,
+               sum(duration_min) OVER w AS cum_sum,
+               count(*)          OVER w AS cum_cnt
+        FROM trip_times
+        WINDOW w AS (PARTITION BY pu_zone ORDER BY avail_dropoff)
+    """)
 
 def build_feature_tables(cfg):
     con = connect(cfg)
     try:
-        con.execute("DROP TABLE IF EXISTS zone_cum")
-        con.execute("""
-            CREATE TABLE zone_cum AS
-            SELECT pu_zone,
-                   avail_dropoff,
-                   sum(duration_min) OVER w AS cum_sum,
-                   count(*)          OVER w AS cum_cnt
-            FROM trip_times
-            WINDOW w AS (PARTITION BY pu_zone ORDER BY avail_dropoff)
-        """)
+        create_zone_cum(con)
 
         con.execute("DROP TABLE IF EXISTS zone_global")
         con.execute("""

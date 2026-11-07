@@ -58,3 +58,22 @@
 │        -0.012 │        0.011 │             0.001 │            0.535 │           0.774 │         0.748 │
 └───────────────┴──────────────┴───────────────────┴──────────────────┴─────────────────┴───────────────┘
 
+## 2026-11-07 (continued 5)
+- Correlations with target (row features): pickup_hour -0.012, passengers 0.011, leak_dropoff_hour 0.001,
+  leak_zone_avg_global 0.535, leak_trip_distance 0.774, leak_total_amount 0.748.
+  Lesson: dropoff hour has ~0 standalone correlation but is still invalid -> audit availability, not correlation.
+- Implemented temporal_join.py: ASOF LEFT JOIN on zone_cum for N2 (as-of t_pred, <=) and N3 (7-day lookback
+  via difference of running totals, window (t_pred-7d, t_pred]). No history -> NULL, not 0.
+- Implemented pipeline.py (one command, rebuilds from raw). Timings on 4 GB / 2-core laptop (O: SSD):
+    [ok] ingestion                    8.6s
+    [ok] availability times           4.0s
+    [ok] prediction examples          0.7s
+    [ok] feature tables               3.7s
+    [ok] point-in-time features       1.6s
+    Total: 18.6s
+- Safe vs leaky zone average correlation: safe_asof <x>, safe_7d <y>, leaky_global <0.535>.
+- Tests: 8 synthetic hand-checked cases (boundaries: exactly at t_pred included, +1s excluded,
+  window left edge excluded, 1s inside included, no history -> NULL, zones isolated) + brute-force
+  cross-check on 100 real examples. All passing.
+- PHASE 1 GATE PASSED: data loads, safe feature built, retrieved correctly for historical predictions.
+- Moved the construction of L5-L8 wrong joins to Phase 2 (built alongside expected outcomes).
