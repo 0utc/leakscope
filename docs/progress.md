@@ -7,7 +7,7 @@
 - [x] First commit pushed to GitHub
 
 ## Phase 1: Data and pipeline  (GATE: load data, build one safe feature, retrieve it correctly)
-- [ ] Download NYC TLC data, data dictionary
+- [x] Download NYC TLC data, data dictionary
 - [ ] DuckDB ingestion + cleaning
 - [ ] Temporal data model (simulated availability times)
 - [ ] Feature tables (safe + intentionally leaky)
