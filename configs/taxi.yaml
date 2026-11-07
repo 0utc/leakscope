@@ -15,3 +15,15 @@ cleaning:
 duckdb:
   memory_limit: 1GB
   threads: 2
+
+availability:            # SIMULATED lags: assumptions, not observed facts
+  pickup_fields_lag_min: 0
+  dropoff_fields_lag_min: 0
+  distance_lag_min: 0
+  fare_lag_min: 2
+  fare_correction_next_day_hour: 6
+
+sampling:
+  n_examples: 100000
+  seed: 42
+  warmup_days: 7

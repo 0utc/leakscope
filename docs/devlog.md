@@ -6,11 +6,13 @@
 - Defined 4 rule types (R1-R4), 8 leaky scenarios, 4 negative controls.
 - Decision: availability times are simulated with configurable lags,
   because NYC TLC data does not record when fields became available.
+
 ## 2026-11-07 (continued)
 - Downloaded yellow_tripdata_2024-01.parquet and taxi zone lookup.
 - Explored data in DuckDB (experiments/explore_data.py)
 - Wrote docs/data_dictionary.md: classified every column as known-at-pickup or post-outcome.
 - Finding: raw data has no trip ID and no availability timestamps, so both must be created/simulated.
+
 ## 2026-11-07 (continued 2)
 - Raw data findings: 2,964,624 rows; pickups from 2002 to Feb 2024 (18 outside Jan 2024);
   870 dropoff<=pickup; 1,982 trips >3h (max 9,455 min); 60,371 zero-distance; 140,162 null passenger_count.
@@ -29,3 +31,13 @@
 │ nonpositive_duration  │     870 │  0.029 │
 │ pickup_outside_window │      18 │  0.001 │
 └───────────────────────┴─────────┴────────┘
+
+## 2026-11-07 (continued 3)
+- Cleaning result: 2,927,502 kept; rejected 37,122 (1.25%): 34,251 too short (<1 min),
+  1,983 too long (>180 min), 870 nonpositive, 18 outside window. Median duration 11.8 min after cleaning.
+- Biggest rejection category is too-short trips (1.155%), likely cancellations or meter glitches.
+- Implemented temporal_model.py: trip_times (event + simulated availability) and prediction_examples.
+- Design: 100k examples sampled deterministically (hash of trip_id + seed 42) from trips on/after Jan 8
+  (7-day warm-up for lookback features); history for aggregates uses ALL clean trips, as a live system would.
+- Verified: clock ordering holds; a trip's own outcome fields are 100% unavailable at its t_pred;
+  pickup fields are usable at the boundary (<=), unusable with strict <.

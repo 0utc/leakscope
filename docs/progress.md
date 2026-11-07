@@ -9,7 +9,7 @@
 ## Phase 1: Data and pipeline  (GATE: load data, build one safe feature, retrieve it correctly)
 - [x] Download NYC TLC data, data dictionary
 - [x] DuckDB ingestion + cleaning
-- [ ] Temporal data model (simulated availability times)
+- [x] Temporal data model (simulated availability times)
 - [ ] Feature tables (safe + intentionally leaky)
 - [ ] Point-in-time SQL join
 - [ ] First end-to-end pipeline + correctness tests
