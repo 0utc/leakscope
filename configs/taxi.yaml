@@ -1,0 +1,17 @@
+data:
+  raw_parquet: data/raw/yellow_tripdata_2024-01.parquet
+  zone_lookup: data/raw/taxi_zone_lookup.csv
+  database: data/processed/leakscope.duckdb
+  temp_dir: tmp
+
+window:
+  start: "2024-01-01"
+  end: "2024-02-01"      # exclusive
+
+cleaning:
+  min_duration_min: 1.0
+  max_duration_min: 180.0
+
+duckdb:
+  memory_limit: 1GB
+  threads: 2
