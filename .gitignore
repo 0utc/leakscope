@@ -1,0 +1,11 @@
+.venv/
+tmp/
+data/
+*.duckdb
+*.parquet
+__pycache__/
+.pytest_cache/
+*.pyc
+report/*.aux
+report/*.log
+report/*.synctex.gz
