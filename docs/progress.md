@@ -16,8 +16,8 @@
 - [x] First end-to-end pipeline + correctness tests
 
 ## Phase 2: Auditor  (GATE: catches all leaky scenarios, ignores all negative controls)
-- [ ] Scenario L9 (R2-only: last completed trip's fare looked up by dropoff time)
 - [ ] Rules R1-R4 implemented
+- [ ] Scenario L9 (R2-only: last completed trip's fare looked up by dropoff time)
 - [ ] Provenance / feature-dependency checks
 - [ ] Deliberately wrong joins for L5-L8 (self-inclusion, in-progress trips, fare correction, post-t_pred snapshot)
 - [ ] 12 scenario fixtures (8 leaky, 4 negative)

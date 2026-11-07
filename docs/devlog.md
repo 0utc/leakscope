@@ -89,3 +89,26 @@
   inversely with group size -> L5/L6 will use small windows (zone x 60 min).
 - Corrections to my own scope: R1 implies R2; L2/L7 trigger R1+R2; L1 needs metadata lying about both
   clocks to be R3-only (registry fixed); added L9 as the only R2-only scenario.
+
+## 2026-11-07 (continued 7)
+- Implemented auditor.py: R1 (event > t_pred), R2 (availability > t_pred, strict so == is valid),
+  R3 (declared post-outcome) for row features, returning Finding objects with trip IDs and explanations.
+- Tests: 8 hand-built fixture tests incl. boundary (== t_pred not flagged, +1s flagged),
+  L1 pattern (metadata lies -> only R3), L3 pattern (R1+R2+R3), unknown clock rejected.
+- Real-data result:
+feature                  scen  rules fired  max rows/rule
+----------------------------------------------------------
+pickup_hour              N1    -                        0
+pickup_dow               N1    -                        0
+pu_zone                  N1    -                        0
+passenger_count_filled   N1    -                        0
+passenger_missing        N1    -                        0
+zone_avg_dur_asof        N2    -                        0  (aggregate: R4 pending)
+zone_avg_dur_7d          N3    -                        0  (aggregate: R4 pending)
+leak_trip_distance       L1    R3                  100000
+leak_total_amount        L2    R1,R2               100000
+leak_dropoff_hour        L3    R1,R2,R3            100000
+leak_zone_avg_global     L4    -                        0  (aggregate: R4 pending)
+
+- Known gap: aggregate features (L4) are not yet judged; R4 comes next.
+
