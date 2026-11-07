@@ -76,7 +76,7 @@ features:
     scenario: L1
     source: "clean_trips.trip_distance"
     transformation: "identity"
-    event_time: event_dropoff
+    event_time: event_pickup             # WRONG ON PURPOSE: metadata claims it was recorded at pickup
     availability_time: avail_pickup      # WRONG ON PURPOSE: optimistic metadata
     declared_post_outcome: true
 

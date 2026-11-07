@@ -77,3 +77,15 @@
   cross-check on 100 real examples. All passing.
 - PHASE 1 GATE PASSED: data loads, safe feature built, retrieved correctly for historical predictions.
 - Moved the construction of L5-L8 wrong joins to Phase 2 (built alongside expected outcomes).
+
+## 2026-11-07 (continued 6)
+- PHASE 1 GATE PASSED. Pipeline from scratch: 18.6s total (ingestion 8.6, availability 4.0,
+  examples 0.7, features 3.7, PIT 1.6) on 4 GB / 2-core laptop, warm run. pytest: 9 passed.
+- Coverage: 0.002% of examples have no zone history (NULL, not 0). Mean trips pooled per zone average:
+  47,452 (as-of), 18,055 (7-day).
+- KEY FINDING: safe zone averages r=0.534 / 0.533 vs leaky global average r=0.535. Aggregates pooling
+  ~10^4 trips barely change when one trip or a few future trips are included, so the L4 leak is real
+  but nearly invisible to metrics; only an availability audit catches it. Leakage magnitude scales
+  inversely with group size -> L5/L6 will use small windows (zone x 60 min).
+- Corrections to my own scope: R1 implies R2; L2/L7 trigger R1+R2; L1 needs metadata lying about both
+  clocks to be R3-only (registry fixed); added L9 as the only R2-only scenario.

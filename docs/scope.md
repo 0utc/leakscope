@@ -40,27 +40,34 @@ is <= t_pred, within a lookback window.
 - R4 Incorrect aggregation: an aggregate includes rows that are
   unavailable at t_pred (including the row being predicted).
 
+Rule notes: R1 implies R2 whenever metadata is consistent (availability >= event),
+so R1 is the stronger diagnosis (the feature describes something that had not yet
+happened) and R2 alone means it happened but was not yet usable.
+
 ## 6. Test scenarios (known expected outcomes)
+A scenario may trigger several rules. Each scenario's expected outcome is its
+full set of rules.
+
 Leaky scenarios (the auditor MUST flag these):
-| ID | Scenario                                                              | Expected rules |
-|----|-----------------------------------------------------------------------|------|
-| L1 | Final trip_distance used as a feature, but the registry gives it a wrong, optimistic availability timestamp                                 | R3   |
-| L2 | Final fare amount used as a feature                                   | R2   |
-| L3 | Feature derived from the dropoff time (e.g. dropoff hour)             | R2 + R3   |
-| L4 | Zone average duration over the whole dataset (includes the future)    | R4   |
-| L5 | Rolling average that includes the current trip itself                 | R4   |
-| L6 | Rolling average including trips still in progress at t_pred           | R4   |
-| L7 | Next-day fare correction used at prediction time                      | R2   |
-| L8 | Non-point-in-time join: feature snapshot taken after t_pred           | R1   |
-A scenario may trigger several rules. Each scenario’s expected outcome is its full set of rules.
+| ID | Scenario | Expected rules |
+|----|----------|----------------|
+| L1 | Final trip_distance used as a feature; the registry wrongly claims it was recorded at pickup (metadata lies) | R3 |
+| L2 | Final total fare of the trip itself | R1, R2 |
+| L3 | Dropoff hour of the trip itself | R1, R2, R3 |
+| L4 | Zone average duration over the whole dataset (includes the future and the current trip) | R4 |
+| L5 | Zone rolling average that includes the current trip itself | R4 |
+| L6 | Zone rolling average (last 60 min by pickup time) that includes trips still in progress at t_pred (the 10:00 vs 10:25 case) | R4 |
+| L7 | Next-day fare correction of the trip itself | R1, R2 |
+| L8 | Feature snapshot taken after t_pred (non-point-in-time join) | R1, R2 |
+| L9 | Fare of the last completed trip in the zone, looked up by dropoff time instead of fare availability time | R2 |
 
 Negative controls (the auditor MUST NOT flag these):
-| ID | Scenario                                                       |
-|----|----------------------------------------------------------------|
-| N1 | Pickup hour, day of week, zone, passenger count                |
+| ID | Scenario |
+|----|----------|
+| N1 | Pickup hour, day of week, zone, passenger count |
 | N2 | Zone average using only trips with availability time <= t_pred |
-| N3 | 7-day lookback average over trips whose availability time is in (t_pred − 7 days, t_pred]           |
-| N4 | Boundary case: a source trip available at exactly t_pred       |
+| N3 | 7-day lookback average over trips with availability time in (t_pred - 7 days, t_pred] |
+| N4 | Boundary case: a source trip available at exactly t_pred (valid under <=) |
 
 ## 7. Explicit limitations
 - Availability times are simulated, not observed.
