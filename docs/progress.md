@@ -20,9 +20,9 @@
 - [x] Deliberately wrong joins for L5-L8 (self-inclusion, in-progress trips, fare correction, post-t_pred snapshot)
 - [x] Scenario L9 (R2-only: last completed trip's fare looked up by dropoff time)
 - [x] Small-window aggregates (zone x last 60 min) so L5/L6 leakage is measurable
-- [ ] Provenance / feature-dependency checks (lineage tables and conformance test done; dependency analysis later)
-- [ ] 12 scenario fixtures (8 leaky, 4 negative)
-- [ ] Positive/negative test suite
+- [x] Labelled scenarios: 10 leaky (L1-L10), 5 negative (N1-N5)
+- [x] Provenance checks (source metadata, lineage tables, conformance)
+- [x] Positive/negative test suite
 
 ## Phase 3: ML experiments  (GATE: reproducible leaky vs corrected comparison)
 - [ ] Chronological split + baseline
@@ -37,3 +37,8 @@
 - [ ] README, docs, charts, demo
 - [ ] LaTeX report
 - [ ] Final clean-install test + release
+
+## Advanced (after MVP)
+- [ ] Feature dependency analysis
+- [ ] Sensitivity of results to the simulated availability lags (0, 2, 5 min)
+- [ ] Feast comparison

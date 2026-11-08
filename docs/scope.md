@@ -64,6 +64,7 @@ Leaky scenarios (the auditor MUST flag these):
 | L7 | Next-day fare correction of the trip itself | R1, R2 |
 | L8 | Feature snapshot taken after t_pred (non-point-in-time join) | R1, R2 |
 | L9 | Fare of the last completed trip in the zone, looked up by dropoff time instead of fare availability time | R2 |
+| L10 | Boundary mirror of N4: a source available ONE SECOND after t_pred (fixture) | R2 |
 
 Negative controls (the auditor MUST NOT flag these):
 | ID | Scenario |
@@ -80,3 +81,12 @@ Negative controls (the auditor MUST NOT flag these):
   finding every kind of leakage.
 - Out of scope for the MVP: cross-validation leakage, target encoding
   leakage, Feast comparison, streaming, cloud deployment.
+
+## 8. Boundary fixtures and known limitations
+- N4 (source available at exactly t_pred, must stay clean) and L10 (one second later, must fire R2)
+  run on a tiny in-memory fixture, not on the taxi data.
+- M1 (known limitation): an aggregate whose registry declaration is false. Rules R1-R4 judge the
+  declaration and cannot see this; the conformance check (stored values recomputed from the
+  declared definition) can.
+- Scores are computed on scenarios designed together with the auditor. They show the
+  implementation matches the specification, not that all leakage is caught.

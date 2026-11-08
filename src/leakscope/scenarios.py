@@ -11,11 +11,33 @@ Builds the scenario features that the safe pipeline does NOT contain:
 L9 also writes a lineage table (which source trip was used and its clocks),
 because its source record is not the example's own trip.
 """
+import duckdb
+
+from leakscope.feature_builder import create_zone_cum
 from leakscope.ingestion import connect, load_config
 from leakscope.temporal_join import build_lookback
 
 WINDOW_MIN = 60
 
+# Ground truth: the rules each scenario MUST trigger (mirrors docs/scope.md, section 6).
+# An empty set means the auditor must stay silent (negative control).
+EXPECTED_RULES = {
+    "L1": {"R3"}, "L2": {"R1", "R2"}, "L3": {"R1", "R2", "R3"},
+    "L4": {"R4"}, "L5": {"R4"}, "L6": {"R4"},
+    "L7": {"R1", "R2"}, "L8": {"R1", "R2"}, "L9": {"R2"}, "L10": {"R2"},
+    "N1": set(), "N2": set(), "N3": set(), "N4": set(), "N5": set(),
+}
+
+SCENARIO_NAMES = {
+    "L1": "final distance, metadata lies", "L2": "final fare of own trip",
+    "L3": "own dropoff hour", "L4": "whole-dataset zone average",
+    "L5": "rolling average incl. own trip", "L6": "rolling avg incl. in-progress trips",
+    "L7": "next-day fare correction", "L8": "end-of-day snapshot join",
+    "L9": "last fare by wrong clock", "L10": "available 1 second too late",
+    "N1": "pickup-time fields", "N2": "zone avg available by t_pred",
+    "N3": "7-day lookback average", "N4": "available at exactly t_pred",
+    "N5": "60-minute availability window",
+}
 
 def build_scenario_features(con, examples="row_features", window_min=WINDOW_MIN):
     # running totals ordered by PICKUP time (used by the faulty L6 window)
@@ -133,6 +155,93 @@ def verify(cfg):
     finally:
         con.close()
 
+# ------------------------------------------------------------------ fixtures
+def _feature(name, scenario, **kw):
+    base = dict(name=name, kind="row", scenario=scenario, source="fixture",
+                transformation="fixture", event_time="event_dropoff",
+                availability_time="avail_fare", declared_post_outcome=False)
+    base.update(kw)
+    return base
+
+
+def build_boundary_fixture():
+    """In-memory micro dataset for the boundary scenarios (deterministic).
+
+    N4  : the source record becomes available at EXACTLY t_pred -> valid (<=)
+    L10 : the source record becomes available ONE SECOND after t_pred -> R2
+    Returns (connection, features, n_examples).
+    """
+    con = duckdb.connect()
+    con.execute("""
+        CREATE TABLE row_features AS
+        SELECT * FROM (VALUES
+            (1, TIMESTAMP '2024-01-10 10:00:00'),
+            (2, TIMESTAMP '2024-01-10 11:30:00'),
+            (3, TIMESTAMP '2024-01-10 23:59:59')
+        ) t(trip_id, t_pred)
+    """)
+    for table, shift in (("boundary_exact", "0 SECOND"), ("boundary_late", "1 SECOND")):
+        con.execute(f"""
+            CREATE TABLE lineage_{table} AS
+            SELECT trip_id, 100 + trip_id AS src_trip_id,
+                   t_pred - INTERVAL 2 MINUTE AS event_ts,
+                   t_pred + INTERVAL {shift}  AS avail_ts
+            FROM row_features
+        """)
+    features = [
+        _feature("boundary_exact", "N4", source_record="lookup"),
+        _feature("boundary_late", "L10", source_record="lookup"),
+    ]
+    return con, features, 3
+
+
+def build_lying_aggregate_fixture():
+    """Known limitation M1: an aggregate that DECLARES an availability-based
+    window but whose stored values were built from a pickup-time window.
+
+    Declaration-based rules see nothing wrong; only the conformance check can
+    notice. Returns (connection, feature, table, column).
+    """
+    con = duckdb.connect()
+    con.execute("""
+        CREATE TABLE trip_times AS
+        SELECT trip_id, pu_zone,
+               CAST(date_diff('second', p, d) / 60.0 AS DOUBLE) AS duration_min,
+               p AS event_pickup, d AS event_dropoff, d AS avail_dropoff
+        FROM (VALUES
+          (1, 1, TIMESTAMP '2024-01-10 10:00:00', TIMESTAMP '2024-01-10 10:30:00'),
+          (2, 1, TIMESTAMP '2024-01-10 10:10:00', TIMESTAMP '2024-01-10 10:20:00'),
+          (3, 1, TIMESTAMP '2024-01-10 10:25:00', TIMESTAMP '2024-01-10 11:15:00'),
+          (4, 1, TIMESTAMP '2024-01-10 10:40:00', TIMESTAMP '2024-01-10 11:00:00'),
+          (5, 1, TIMESTAMP '2024-01-10 11:00:00', TIMESTAMP '2024-01-10 11:10:00'),
+          (6, 1, TIMESTAMP '2024-01-10 09:00:00', TIMESTAMP '2024-01-10 09:30:00'),
+          (7, 2, TIMESTAMP '2024-01-10 10:30:00', TIMESTAMP '2024-01-10 10:40:00'),
+          (8, 1, TIMESTAMP '2024-01-10 09:25:00', TIMESTAMP '2024-01-10 10:45:00')
+        ) t(trip_id, pu_zone, p, d)
+    """)
+    create_zone_cum(con)
+    con.execute("""
+        CREATE TABLE row_features AS
+        SELECT trip_id, pu_zone, event_pickup AS t_pred FROM trip_times
+    """)
+    # the "wrong" implementation: window on PICKUP time, excluding the own trip
+    con.execute("""
+        CREATE TABLE stored_lying AS
+        SELECT ex.trip_id,
+               (SELECT avg(s.duration_min) FROM trip_times s
+                WHERE s.pu_zone = ex.pu_zone AND s.trip_id <> ex.trip_id
+                  AND s.event_pickup >  ex.t_pred - INTERVAL 60 MINUTE
+                  AND s.event_pickup <= ex.t_pred) AS hidden_avg
+        FROM row_features ex
+    """)
+    feature = dict(
+        name="hidden_inprogress_avg", kind="aggregate", scenario="M1",
+        source="fixture", transformation="declared: availability-based 60 min window",
+        event_time="event_dropoff", availability_time="avail_dropoff",
+        declared_post_outcome=False, group_by="pu_zone", window="lookback",
+        lookback_minutes=60, window_clock="avail_dropoff",
+        includes_current_row=False)
+    return con, feature, "stored_lying", "hidden_avg"
 
 if __name__ == "__main__":
     import argparse

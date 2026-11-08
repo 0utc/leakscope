@@ -112,7 +112,7 @@ leak_zone_avg_global     L4    -                        0  (aggregate: R4 pendin
 
 - Known gap: aggregate features (L4) are not yet judged; R4 comes next.
 
-## 2026-11-09
+## 2026-11-08
 - Auditor R1-R3 on real data matched predictions exactly (N1 clean; L1 R3; L2 R1+R2; L3 R1+R2+R3).
 - Implemented R4: audits the DECLARED aggregate definition. Whole-dataset window via running totals;
   availability-window aggregates only violated by the own trip; pickup-time windows via a bucket join
@@ -178,3 +178,55 @@ secenarios tables :
 [ok] point-in-time features       1.6s
 [ok] scenario features            9.4s
 Total: 29.4s
+
+## 2026-11-08 (continued)
+- Real-data auditor run matched all predictions; pytest 34 passed; pipeline from scratch 29.4s on laptop.
+- Correlations with target: N5 0.541, L5 0.617, L6 0.566, L7 0.771, L8 0.536, L9 0.344 (N2 0.534 vs L4 0.535).
+  Leakage magnitude grows as the aggregated group shrinks; big-window leaks (L4, L8) are invisible to metrics.
+- 0.82% of examples have an empty 60-minute window -> L5 equals the target exactly there (by construction).
+- L9: 90.3% flagged; depends on the SIMULATED 2-min fare lag and zone traffic density (at lag 0 it would
+  flag nothing) -> plan lag-sensitivity analysis.
+- Added ground truth (EXPECTED_RULES), boundary fixtures N4/L10, scorecard (audit_scoring.py),
+  conformance.py (promoted from tests), known limitation M1.
+- Scorecard:
+scen  what it tests                        feature                        expected    fired       ok  rows flagged
+------------------------------------------------------------------------------------------------------------------
+L1    final distance, metadata lies        leak_trip_distance             R3          R3          yes 100000/100000
+L2    final fare of own trip               leak_total_amount              R1,R2       R1,R2       yes 100000/100000
+L3    own dropoff hour                     leak_dropoff_hour              R1,R2,R3    R1,R2,R3    yes 100000/100000
+L4    whole-dataset zone average           leak_zone_avg_global           R4          R4          yes 100000/100000
+L5    rolling average incl. own trip       leak_zone_avg_60m_self         R4          R4          yes 100000/100000
+L6    rolling avg incl. in-progress trips  leak_zone_avg_60m_inprogress   R4          R4          yes 98211/100000
+L7    next-day fare correction             leak_fare_correction           R1,R2       R1,R2       yes 100000/100000
+L8    end-of-day snapshot join             leak_snapshot_zone_avg         R1,R2       R1,R2       yes 100000/100000
+L9    last fare by wrong clock             leak_last_fare_zone            R2          R2          yes 90309/100000
+L10   available 1 second too late          boundary_late                  R2          R2          yes     3/3
+N1    pickup-time fields                   pickup_hour                    -           -           yes     0/100000
+N1    pickup-time fields                   pickup_dow                     -           -           yes     0/100000
+N1    pickup-time fields                   pu_zone                        -           -           yes     0/100000
+N1    pickup-time fields                   passenger_count_filled         -           -           yes     0/100000
+N1    pickup-time fields                   passenger_missing              -           -           yes     0/100000
+N2    zone avg available by t_pred         zone_avg_dur_asof              -           -           yes     0/100000
+N3    7-day lookback average               zone_avg_dur_7d                -           -           yes     0/100000
+N4    available at exactly t_pred          boundary_exact                 -           -           yes     0/3
+N5    60-minute availability window        zone_avg_dur_60m               -           -           yes     0/100000
+
+19 features evaluated (10 leaky, 9 valid); exact rule-set match: 19/19
+Feature level: TP=10 FP=0 FN=0 TN=9  precision=1.000 recall=1.000
+Rule level   : TP=15 FP=0 FN=0 TN=61  precision=1.000 recall=1.000
+
+Conformance (stored aggregate values vs their declared definition)
+  zone_avg_dur_asof              conforms
+  zone_avg_dur_7d                conforms
+  leak_zone_avg_global           conforms
+  zone_avg_dur_60m               conforms
+  leak_zone_avg_60m_self         conforms
+  leak_zone_avg_60m_inprogress   conforms
+
+Known limitation M1: aggregate whose declaration is false
+  rules R1-R4 fired : none (missed)
+  conformance check : 5 mismatching examples (caught)
+  
+- Caveat for the report: scenarios and auditor were co-designed -> scores show spec conformance,
+  not general leakage detection.
+- PHASE 2 GATE PASSED.
