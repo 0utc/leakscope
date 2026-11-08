@@ -1,0 +1,22 @@
+{
+  "test_start": "2024-01-25 00:00:00",
+  "n_total": 100000,
+  "n_train": 69899,
+  "n_test": 30066,
+  "n_purged": 35,
+  "train_median_min": 11.7,
+  "baseline_mae": 7.787001374753321,
+  "baseline_rmse": 12.398924095524551,
+  "seed": 0,
+  "model": "HistGradientBoostingRegressor",
+  "model_params": {
+    "max_iter": 200,
+    "learning_rate": 0.1,
+    "max_leaf_nodes": 31
+  },
+  "python": "3.13.11",
+  "sklearn": "1.9.1",
+  "duckdb": "2.0.0",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "cpu_count": 2
+}

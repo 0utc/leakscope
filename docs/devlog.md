@@ -226,7 +226,56 @@ Conformance (stored aggregate values vs their declared definition)
 Known limitation M1: aggregate whose declaration is false
   rules R1-R4 fired : none (missed)
   conformance check : 5 mismatching examples (caught)
-  
+
 - Caveat for the report: scenarios and auditor were co-designed -> scores show spec conformance,
   not general leakage detection.
 - PHASE 2 GATE PASSED.
+
+## 2026-11-08 (continued 2)
+- Phase 2 gate passed: scorecard 19/19, feature-level TP=10 FP=0 FN=0 TN=9, rule-level TP=15 FP=0 FN=0 TN=61,
+  M1 missed by R1-R4 but caught by conformance (5 mismatches). 41 tests passed in 15.6s.
+- Phase 3 design: purged chronological split (train = labels available by cutoff, test = predicted at/after
+  cutoff, in-progress trips purged). Test = last 7 days (Jan 25-31), train = Jan 8-24.
+  HistGradientBoostingRegressor (no early stopping: its random validation split would leak inside training;
+  pu_zone numeric because >255 categories). Leaky models = corrected set + ONE leaky feature; plus ALL.
+  The run refuses to start if the auditor disagrees with the scenario labels.
+- Results: train 69,899 | test 30,066 | purged 35 (trips in progress at the cutoff).
+  Constant-median baseline (11.70 min): MAE 7.787, RMSE 12.399.
+
+  | experiment | MAE | RMSE | dMAE% | dRMSE% | rows flagged |
+  |---|---|---|---|---|---|
+  | corrected (valid features only) | 6.809 | 9.848 | 0.0 | 0.0 | - |
+  | + L1 leak_trip_distance | 3.335 | 5.526 | -51.0 | -43.9 | 100.0% |
+  | + L2 leak_total_amount | 2.690 | 5.128 | -60.5 | -47.9 | 100.0% |
+  | + L3 leak_dropoff_hour | 6.368 | 9.073 | -6.5 | -7.9 | 100.0% |
+  | + L4 leak_zone_avg_global | 6.776 | 9.845 | -0.5 | -0.0 | 100.0% |
+  | + L5 leak_zone_avg_60m_self | 4.362 | 6.911 | -35.9 | -29.8 | 100.0% |
+  | + L6 leak_zone_avg_60m_inprogress | 6.804 | 9.852 | -0.1 | +0.0 | 98.2% |
+  | + L7 leak_fare_correction | 2.146 | 4.688 | -68.5 | -52.4 | 100.0% |
+  | + L8 leak_snapshot_zone_avg | 6.801 | 9.867 | -0.1 | +0.2 | 100.0% |
+  | + L9 leak_last_fare_zone | 6.806 | 9.845 | -0.0 | -0.0 | 90.3% |
+  | + ALL leaky features | 1.451 | 3.349 | -78.7 | -66.0 | - |
+- Observation to discuss:
+  - Honest skill is modest: the corrected model beats the baseline by 12.6% (MAE) and 20.6% (RMSE).
+    The ALL-leaky model reports MAE 1.451, 78.7% lower than the honest model: apparent skill is far
+    above real skill.
+  - The share of rows flagged does NOT predict the damage. 7 of 9 leaky features are flagged on 100% of
+    rows, yet their MAE change ranges from -0.1% (L8) to -68.5% (L7); L6 (98.2%) and L9 (90.3%) also
+    change almost nothing. The flagged share measures how often a rule is violated, not how informative
+    the leaked value is.
+  - Leaks invisible to the metrics: L4, L6, L8 and L9 changed MAE by 0.5% or less (L8's RMSE even rose
+    0.2%). A score-based check would never notice them, but the auditor flags all four (R4, R4, R1+R2,
+    R2). Caveat: no uncertainty estimates yet, so changes of a few tenths of a percent cannot be told
+    apart from noise either way.
+  - Low correlation does not mean safe: L3 (dropoff hour) had r = 0.001 with the target alone but
+    lowers MAE by 6.5% combined with pickup hour (the two together reveal trip length at hour resolution).
+  - L5 gives -35.9% although its window pools few trips. Hypothesis (untested): the corrected set already
+    contains the safe 60-minute average (N5), and L5 differs from it only by the trip's own duration,
+    so the model can recover the target from the two. Test: rerun L5 without N5.
+  - Leaks combine: ALL (MAE 1.451) is better than the best single leak (L7, 2.146).
+  - Single-feature correlation overstated L6's effect (r 0.566 vs 0.541 for N5); in the full model it
+    added nothing measurable.
+- Timings (4 GB / 2-core laptop): 1.6 s to 2.5 s per model, measured as fit + predict with 200 boosting
+  iterations on 69,899 training rows. 1.6 s for the corrected model (8 features), 1.6 to 2.2 s for the
+  9-feature models, 2.5 s for ALL (17 features). About 21 s for all 11 models (sum of the rounded values;
+  excludes loading the table and the audit). Test suite: 47 passed in 22.2 s.

@@ -25,8 +25,10 @@
 - [x] Positive/negative test suite
 
 ## Phase 3: ML experiments  (GATE: reproducible leaky vs corrected comparison)
-- [ ] Chronological split + baseline
-- [ ] Leaky vs corrected models
+- [x] Chronological split + baseline
+- [x] Leaky vs corrected models
+- [ ] Uncertainty (block bootstrap over the test set)
+- [ ] Production-condition evaluation (leaky models scored when the leaky value is not available at serving time)
 - [ ] MAE/RMSE analysis
 
 ## Phase 4: Packaging
