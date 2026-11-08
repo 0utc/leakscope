@@ -261,4 +261,4 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Uncertainty, production and ablations")
     parser.add_argument("--config", default="configs/taxi.yaml")
-    run_analysis(parser.parse_args().config)
+    run_analysis(parser.parse_args().config)    

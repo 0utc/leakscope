@@ -70,7 +70,8 @@ def _clock_check(con, feat, clock_key, rule, examples, sample_n):
         ORDER BY ex.trip_id LIMIT {int(sample_n)}
     """).fetchall()
     trip_id, t_pred, clock_value, src_trip_id = rows[0]
-    gap_min = round((clock_value - t_pred).total_seconds() / 60.0, 1)
+    gap_s = (clock_value - t_pred).total_seconds()
+    gap = f"{gap_s:.0f} s" if gap_s < 60 else f"{gap_s / 60.0:.1f} min"
     pct = 100.0 * n_bad / n_checked
     if rule == "R1":
         what = f"describes something that happens at {clock}, after the prediction time"
@@ -80,7 +81,7 @@ def _clock_check(con, feat, clock_key, rule, examples, sample_n):
     explanation = (
         f"'{feat['name']}' {what}, for {n_bad} of {n_checked} examples "
         f"({pct:.1f}%). Example: trip {trip_id} is predicted at {t_pred} but "
-        f"the value{via} is tied to {clock_value} ({gap_min} min later)."
+        f"the value{via} is tied to {clock_value} ({gap} later)."
     )
     return Finding(feat["name"], rule, n_bad, n_checked,
                    [r[0] for r in rows], explanation)

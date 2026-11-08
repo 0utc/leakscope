@@ -32,7 +32,7 @@
 - [x] MAE/RMSE analysis
 
 ## Phase 4: Packaging
-- [ ] Reports (Markdown/HTML)
+- [x] Reports (Markdown + JSON + figures)
 - [ ] CLI
 - [ ] CI + robustness tests
 - [ ] Benchmarks (10k/50k/200k)

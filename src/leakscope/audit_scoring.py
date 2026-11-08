@@ -32,7 +32,7 @@ def evaluate_features(con, features, examples="row_features"):
             expected=set(scenarios.EXPECTED_RULES[f["scenario"]]),
             fired={x.rule for x in findings},
             n_flagged=max((x.n_violations for x in findings), default=0),
-            n_examples=n_examples))
+            n_examples=n_examples, findings=findings))
     return rows
 
 
@@ -99,7 +99,8 @@ def print_scorecard(rows, conformance, limitation):
           f"({'caught' if mism else 'missed'})")
 
 
-def run(config_path="configs/taxi.yaml", n_sample=30):
+def collect(config_path="configs/taxi.yaml", n_sample=30):
+    """Run the whole audit evaluation without printing anything."""
     cfg = load_config(config_path)
     feats = load_registry()
     con = connect(cfg)
@@ -126,6 +127,11 @@ def run(config_path="configs/taxi.yaml", n_sample=30):
                       check_conformance(lcon, lfeat, ltable, lcol))
     finally:
         lcon.close()
+    return rows, conformance, limitation
+
+
+def run(config_path="configs/taxi.yaml", n_sample=30):
+    rows, conformance, limitation = collect(config_path, n_sample)
     print_scorecard(rows, conformance, limitation)
     return rows, conformance, limitation
 

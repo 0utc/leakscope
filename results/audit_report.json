@@ -1,0 +1,490 @@
+{
+  "scenarios": [
+    {
+      "scenario": "L1",
+      "feature": "leak_trip_distance",
+      "expected_rules": [
+        "R3"
+      ],
+      "fired_rules": [
+        "R3"
+      ],
+      "matches": true,
+      "n_flagged": 100000,
+      "n_examples": 100000,
+      "findings": [
+        {
+          "rule": "R3",
+          "n_violations": 100000,
+          "n_checked": 100000,
+          "pct": 100.0,
+          "sample_trip_ids": [
+            581623,
+            581631,
+            581655,
+            581662,
+            581723
+          ],
+          "explanation": "'leak_trip_distance' is declared to be known only after the outcome, so it can never be used for a prediction, whatever its timestamps say. Affects all 100000 examples."
+        }
+      ]
+    },
+    {
+      "scenario": "L2",
+      "feature": "leak_total_amount",
+      "expected_rules": [
+        "R1",
+        "R2"
+      ],
+      "fired_rules": [
+        "R1",
+        "R2"
+      ],
+      "matches": true,
+      "n_flagged": 100000,
+      "n_examples": 100000,
+      "findings": [
+        {
+          "rule": "R1",
+          "n_violations": 100000,
+          "n_checked": 100000,
+          "pct": 100.0,
+          "sample_trip_ids": [
+            581623,
+            581631,
+            581655,
+            581662,
+            581723
+          ],
+          "explanation": "'leak_total_amount' describes something that happens at event_dropoff, after the prediction time, for 100000 of 100000 examples (100.0%). Example: trip 581623 is predicted at 2024-01-08 00:37:16 but the value is tied to 2024-01-08 01:01:07 (23.9 min later)."
+        },
+        {
+          "rule": "R2",
+          "n_violations": 100000,
+          "n_checked": 100000,
+          "pct": 100.0,
+          "sample_trip_ids": [
+            581623,
+            581631,
+            581655,
+            581662,
+            581723
+          ],
+          "explanation": "'leak_total_amount' only becomes available at avail_fare, after the prediction time, for 100000 of 100000 examples (100.0%). Example: trip 581623 is predicted at 2024-01-08 00:37:16 but the value is tied to 2024-01-08 01:03:07 (25.9 min later)."
+        }
+      ]
+    },
+    {
+      "scenario": "L3",
+      "feature": "leak_dropoff_hour",
+      "expected_rules": [
+        "R1",
+        "R2",
+        "R3"
+      ],
+      "fired_rules": [
+        "R1",
+        "R2",
+        "R3"
+      ],
+      "matches": true,
+      "n_flagged": 100000,
+      "n_examples": 100000,
+      "findings": [
+        {
+          "rule": "R1",
+          "n_violations": 100000,
+          "n_checked": 100000,
+          "pct": 100.0,
+          "sample_trip_ids": [
+            581623,
+            581631,
+            581655,
+            581662,
+            581723
+          ],
+          "explanation": "'leak_dropoff_hour' describes something that happens at event_dropoff, after the prediction time, for 100000 of 100000 examples (100.0%). Example: trip 581623 is predicted at 2024-01-08 00:37:16 but the value is tied to 2024-01-08 01:01:07 (23.9 min later)."
+        },
+        {
+          "rule": "R2",
+          "n_violations": 100000,
+          "n_checked": 100000,
+          "pct": 100.0,
+          "sample_trip_ids": [
+            581623,
+            581631,
+            581655,
+            581662,
+            581723
+          ],
+          "explanation": "'leak_dropoff_hour' only becomes available at avail_dropoff, after the prediction time, for 100000 of 100000 examples (100.0%). Example: trip 581623 is predicted at 2024-01-08 00:37:16 but the value is tied to 2024-01-08 01:01:07 (23.9 min later)."
+        },
+        {
+          "rule": "R3",
+          "n_violations": 100000,
+          "n_checked": 100000,
+          "pct": 100.0,
+          "sample_trip_ids": [
+            581623,
+            581631,
+            581655,
+            581662,
+            581723
+          ],
+          "explanation": "'leak_dropoff_hour' is declared to be known only after the outcome, so it can never be used for a prediction, whatever its timestamps say. Affects all 100000 examples."
+        }
+      ]
+    },
+    {
+      "scenario": "L4",
+      "feature": "leak_zone_avg_global",
+      "expected_rules": [
+        "R4"
+      ],
+      "fired_rules": [
+        "R4"
+      ],
+      "matches": true,
+      "n_flagged": 100000,
+      "n_examples": 100000,
+      "findings": [
+        {
+          "rule": "R4",
+          "n_violations": 100000,
+          "n_checked": 100000,
+          "pct": 100.0,
+          "sample_trip_ids": [
+            581623,
+            581631,
+            581655,
+            581662,
+            581723
+          ],
+          "explanation": "'leak_zone_avg_global' aggregates over source trips that were not yet available at prediction time, for 100000 of 100000 examples (100.0%): its window is the whole dataset, so it includes trips that happen after the prediction time; it includes the example's own trip. On average 31509.3 unavailable source trips per affected example (max 117471). Example: trip 581623 is predicted at 2024-01-08 00:37:16 and its aggregate uses 69138 unavailable source trip(s)."
+        }
+      ]
+    },
+    {
+      "scenario": "L5",
+      "feature": "leak_zone_avg_60m_self",
+      "expected_rules": [
+        "R4"
+      ],
+      "fired_rules": [
+        "R4"
+      ],
+      "matches": true,
+      "n_flagged": 100000,
+      "n_examples": 100000,
+      "findings": [
+        {
+          "rule": "R4",
+          "n_violations": 100000,
+          "n_checked": 100000,
+          "pct": 100.0,
+          "sample_trip_ids": [
+            581623,
+            581631,
+            581655,
+            581662,
+            581723
+          ],
+          "explanation": "'leak_zone_avg_60m_self' aggregates over source trips that were not yet available at prediction time, for 100000 of 100000 examples (100.0%): it includes the example's own trip. On average 1.0 unavailable source trips per affected example (max 1). Example: trip 581623 is predicted at 2024-01-08 00:37:16 and its aggregate uses 1 unavailable source trip(s)."
+        }
+      ]
+    },
+    {
+      "scenario": "L6",
+      "feature": "leak_zone_avg_60m_inprogress",
+      "expected_rules": [
+        "R4"
+      ],
+      "fired_rules": [
+        "R4"
+      ],
+      "matches": true,
+      "n_flagged": 98211,
+      "n_examples": 100000,
+      "findings": [
+        {
+          "rule": "R4",
+          "n_violations": 98211,
+          "n_checked": 100000,
+          "pct": 98.211,
+          "sample_trip_ids": [
+            581623,
+            581631,
+            581655,
+            581662,
+            581739
+          ],
+          "explanation": "'leak_zone_avg_60m_inprogress' aggregates over source trips that were not yet available at prediction time, for 98211 of 100000 examples (98.2%): its window is defined on pickup time, so it includes trips still in progress at the prediction time. On average 44.4 unavailable source trips per affected example (max 366). Example: trip 581623 is predicted at 2024-01-08 00:37:16 and its aggregate uses 18 unavailable source trip(s)."
+        }
+      ]
+    },
+    {
+      "scenario": "L7",
+      "feature": "leak_fare_correction",
+      "expected_rules": [
+        "R1",
+        "R2"
+      ],
+      "fired_rules": [
+        "R1",
+        "R2"
+      ],
+      "matches": true,
+      "n_flagged": 100000,
+      "n_examples": 100000,
+      "findings": [
+        {
+          "rule": "R1",
+          "n_violations": 100000,
+          "n_checked": 100000,
+          "pct": 100.0,
+          "sample_trip_ids": [
+            581623,
+            581631,
+            581655,
+            581662,
+            581723
+          ],
+          "explanation": "'leak_fare_correction' describes something that happens at event_dropoff, after the prediction time, for 100000 of 100000 examples (100.0%). Example: trip 581623 is predicted at 2024-01-08 00:37:16 but the value is tied to 2024-01-08 01:01:07 (23.9 min later)."
+        },
+        {
+          "rule": "R2",
+          "n_violations": 100000,
+          "n_checked": 100000,
+          "pct": 100.0,
+          "sample_trip_ids": [
+            581623,
+            581631,
+            581655,
+            581662,
+            581723
+          ],
+          "explanation": "'leak_fare_correction' only becomes available at avail_fare_correction, after the prediction time, for 100000 of 100000 examples (100.0%). Example: trip 581623 is predicted at 2024-01-08 00:37:16 but the value is tied to 2024-01-09 06:00:00 (1762.7 min later)."
+        }
+      ]
+    },
+    {
+      "scenario": "L8",
+      "feature": "leak_snapshot_zone_avg",
+      "expected_rules": [
+        "R1",
+        "R2"
+      ],
+      "fired_rules": [
+        "R1",
+        "R2"
+      ],
+      "matches": true,
+      "n_flagged": 100000,
+      "n_examples": 100000,
+      "findings": [
+        {
+          "rule": "R1",
+          "n_violations": 100000,
+          "n_checked": 100000,
+          "pct": 100.0,
+          "sample_trip_ids": [
+            581623,
+            581631,
+            581655,
+            581662,
+            581723
+          ],
+          "explanation": "'leak_snapshot_zone_avg' describes something that happens at event_snapshot_eod, after the prediction time, for 100000 of 100000 examples (100.0%). Example: trip 581623 is predicted at 2024-01-08 00:37:16 but the value is tied to 2024-01-09 00:00:00 (1402.7 min later)."
+        },
+        {
+          "rule": "R2",
+          "n_violations": 100000,
+          "n_checked": 100000,
+          "pct": 100.0,
+          "sample_trip_ids": [
+            581623,
+            581631,
+            581655,
+            581662,
+            581723
+          ],
+          "explanation": "'leak_snapshot_zone_avg' only becomes available at avail_snapshot_eod, after the prediction time, for 100000 of 100000 examples (100.0%). Example: trip 581623 is predicted at 2024-01-08 00:37:16 but the value is tied to 2024-01-09 00:00:00 (1402.7 min later)."
+        }
+      ]
+    },
+    {
+      "scenario": "L9",
+      "feature": "leak_last_fare_zone",
+      "expected_rules": [
+        "R2"
+      ],
+      "fired_rules": [
+        "R2"
+      ],
+      "matches": true,
+      "n_flagged": 90309,
+      "n_examples": 100000,
+      "findings": [
+        {
+          "rule": "R2",
+          "n_violations": 90309,
+          "n_checked": 99998,
+          "pct": 90.311,
+          "sample_trip_ids": [
+            581623,
+            581655,
+            581662,
+            581723,
+            581739
+          ],
+          "explanation": "'leak_last_fare_zone' only becomes available at avail_fare, after the prediction time, for 90309 of 99998 examples (90.3%). Example: trip 581623 is predicted at 2024-01-08 00:37:16 but the value (source trip 582073) is tied to 2024-01-08 00:38:42 (1.4 min later)."
+        }
+      ]
+    },
+    {
+      "scenario": "L10",
+      "feature": "boundary_late",
+      "expected_rules": [
+        "R2"
+      ],
+      "fired_rules": [
+        "R2"
+      ],
+      "matches": true,
+      "n_flagged": 3,
+      "n_examples": 3,
+      "findings": [
+        {
+          "rule": "R2",
+          "n_violations": 3,
+          "n_checked": 3,
+          "pct": 100.0,
+          "sample_trip_ids": [
+            1,
+            2,
+            3
+          ],
+          "explanation": "'boundary_late' only becomes available at avail_fare, after the prediction time, for 3 of 3 examples (100.0%). Example: trip 1 is predicted at 2024-01-10 10:00:00 but the value (source trip 101) is tied to 2024-01-10 10:00:01 (1 s later)."
+        }
+      ]
+    },
+    {
+      "scenario": "N1",
+      "feature": "pickup_hour",
+      "expected_rules": [],
+      "fired_rules": [],
+      "matches": true,
+      "n_flagged": 0,
+      "n_examples": 100000,
+      "findings": []
+    },
+    {
+      "scenario": "N1",
+      "feature": "pickup_dow",
+      "expected_rules": [],
+      "fired_rules": [],
+      "matches": true,
+      "n_flagged": 0,
+      "n_examples": 100000,
+      "findings": []
+    },
+    {
+      "scenario": "N1",
+      "feature": "pu_zone",
+      "expected_rules": [],
+      "fired_rules": [],
+      "matches": true,
+      "n_flagged": 0,
+      "n_examples": 100000,
+      "findings": []
+    },
+    {
+      "scenario": "N1",
+      "feature": "passenger_count_filled",
+      "expected_rules": [],
+      "fired_rules": [],
+      "matches": true,
+      "n_flagged": 0,
+      "n_examples": 100000,
+      "findings": []
+    },
+    {
+      "scenario": "N1",
+      "feature": "passenger_missing",
+      "expected_rules": [],
+      "fired_rules": [],
+      "matches": true,
+      "n_flagged": 0,
+      "n_examples": 100000,
+      "findings": []
+    },
+    {
+      "scenario": "N2",
+      "feature": "zone_avg_dur_asof",
+      "expected_rules": [],
+      "fired_rules": [],
+      "matches": true,
+      "n_flagged": 0,
+      "n_examples": 100000,
+      "findings": []
+    },
+    {
+      "scenario": "N3",
+      "feature": "zone_avg_dur_7d",
+      "expected_rules": [],
+      "fired_rules": [],
+      "matches": true,
+      "n_flagged": 0,
+      "n_examples": 100000,
+      "findings": []
+    },
+    {
+      "scenario": "N4",
+      "feature": "boundary_exact",
+      "expected_rules": [],
+      "fired_rules": [],
+      "matches": true,
+      "n_flagged": 0,
+      "n_examples": 3,
+      "findings": []
+    },
+    {
+      "scenario": "N5",
+      "feature": "zone_avg_dur_60m",
+      "expected_rules": [],
+      "fired_rules": [],
+      "matches": true,
+      "n_flagged": 0,
+      "n_examples": 100000,
+      "findings": []
+    }
+  ],
+  "metrics": {
+    "feature": {
+      "tp": 10,
+      "fp": 0,
+      "fn": 0,
+      "tn": 9
+    },
+    "rule": {
+      "tp": 15,
+      "fp": 0,
+      "fn": 0,
+      "tn": 61
+    },
+    "exact": 19,
+    "n": 19
+  },
+  "conformance_mismatches": {
+    "zone_avg_dur_asof": 0,
+    "zone_avg_dur_7d": 0,
+    "leak_zone_avg_global": 0,
+    "zone_avg_dur_60m": 0,
+    "leak_zone_avg_60m_self": 0,
+    "leak_zone_avg_60m_inprogress": 0
+  },
+  "known_limitation_M1": {
+    "rules_fired": [],
+    "conformance_mismatches": 5
+  }
+}

@@ -336,3 +336,20 @@ Known limitation M1: aggregate whose declaration is false
   - Limits: one month, one chronological split, one model class, simulated availability lags (2 min fare
     lag, next-day 06:00 corrections), serving substitutes chosen by us. Bootstrap by hour does not capture
     day-level variation (only 7 test days).
+
+## 2026-11-08 (continued 4)
+- Phase 4, step 1: report generator (reporting.py). Outputs results/report.md, results/audit_report.json,
+  assets/fig_offline_vs_production.png, assets/fig_flagged_vs_effect.png. HTML skipped on purpose
+  (Markdown renders on GitHub; JSON is for programs).
+- Design: every number in the summary is computed from the data; no timestamps so reruns only change the
+  file when results change; evaluate_features keeps findings; audit_scoring.run split into collect()
+  (no printing) + run(); auditor explanations show seconds for gaps under one minute.
+- Figure review on real results: numbers match the analysis tables. Figure 1: production bars of L1, L2,
+  L7 and ALL lie entirely above the constant-median baseline line (7.79); L3's interval (about 7.7-8.5)
+  contains it. This is a visual check against a point value, not a formal test (the baseline's own
+  uncertainty is not drawn). Fixes: figure 2 labels now carry the effect size so L4 (-0.5%) and L8
+  (-0.1%) are distinguishable; x-axis capped at 100%; y-axis states "negative = lower error"; figure 1
+  caption warns that overlapping bars are not a paired test.
+- Figure titles are deliberately neutral: an earlier draft claimed "leaky models are worse in
+  production", which is false for L4, L5 and L9 on this data.
+- Tests: 62 passed (47.8 s).
