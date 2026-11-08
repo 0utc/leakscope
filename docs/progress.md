@@ -16,15 +16,15 @@
 - [x] First end-to-end pipeline + correctness tests
 
 ## Phase 2: Auditor  (GATE: catches all leaky scenarios, ignores all negative controls)
-- [ ] Rules R1-R4 implemented
-- [ ] Scenario L9 (R2-only: last completed trip's fare looked up by dropoff time)
-- [ ] Provenance / feature-dependency checks
-- [ ] Deliberately wrong joins for L5-L8 (self-inclusion, in-progress trips, fare correction, post-t_pred snapshot)
+- [x] Rules R1-R4 implemented
+- [x] Deliberately wrong joins for L5-L8 (self-inclusion, in-progress trips, fare correction, post-t_pred snapshot)
+- [x] Scenario L9 (R2-only: last completed trip's fare looked up by dropoff time)
+- [x] Small-window aggregates (zone x last 60 min) so L5/L6 leakage is measurable
+- [ ] Provenance / feature-dependency checks (lineage tables and conformance test done; dependency analysis later)
 - [ ] 12 scenario fixtures (8 leaky, 4 negative)
 - [ ] Positive/negative test suite
 
 ## Phase 3: ML experiments  (GATE: reproducible leaky vs corrected comparison)
-- [ ] Small-window aggregates (zone x last 60 min) so L5/L6 leakage is measurable
 - [ ] Chronological split + baseline
 - [ ] Leaky vs corrected models
 - [ ] MAE/RMSE analysis

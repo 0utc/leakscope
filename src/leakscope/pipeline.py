@@ -1,8 +1,11 @@
 """Run the whole pipeline: raw Parquet -> clean trips -> availability times
--> prediction examples -> feature tables -> point-in-time features."""
+-> prediction examples -> feature tables -> point-in-time features
+-> scenario features."""
 import time
 
-from leakscope import feature_builder, ingestion, temporal_join, temporal_model
+from leakscope import (
+    feature_builder, ingestion, scenarios, temporal_join, temporal_model,
+)
 
 
 def run_all(config_path="configs/taxi.yaml"):
@@ -13,6 +16,7 @@ def run_all(config_path="configs/taxi.yaml"):
         ("prediction examples", lambda: temporal_model.build_examples(cfg)),
         ("feature tables", lambda: feature_builder.build_feature_tables(cfg)),
         ("point-in-time features", lambda: temporal_join.build_all(cfg)),
+        ("scenario features", lambda: scenarios.build_all(cfg)),
     ]
     total_start = time.perf_counter()
     for name, step in steps:

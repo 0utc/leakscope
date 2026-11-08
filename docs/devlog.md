@@ -112,3 +112,69 @@ leak_zone_avg_global     L4    -                        0  (aggregate: R4 pendin
 
 - Known gap: aggregate features (L4) are not yet judged; R4 comes next.
 
+## 2026-11-09
+- Auditor R1-R3 on real data matched predictions exactly (N1 clean; L1 R3; L2 R1+R2; L3 R1+R2+R3).
+- Implemented R4: audits the DECLARED aggregate definition. Whole-dataset window via running totals;
+  availability-window aggregates only violated by the own trip; pickup-time windows via a bucket join
+  (bucket width = window length -> at most 2 buckets) to avoid scanning ~47k trips per example.
+- Lookup features (L9) carry a lineage table (src trip + clocks) so R1/R2 audit the clocks of the
+  trip actually used, not the example's own trip.
+- Added snapshot clocks (event/avail_snapshot_eod) for L8; added N5 (safe 60 min) as the corrected
+  counterpart of L5/L6; scenarios.py builds N5, L5-L9.
+- Conformance test: stored aggregates recomputed by brute force from the declaration (6 features x 30 examples).
+- Honest limitation: if a registry declaration is false AND not covered by the conformance test,
+  R4 cannot see it. R4 supports duration aggregates grouped by zone only (others raise NotImplementedError).
+- Real-data results:
+auditor table :
+    feature                        scen  rules fired    rows flagged (max)
+-----------------------------------------------------------------------
+pickup_hour                    N1    -                               0
+pickup_dow                     N1    -                               0
+pu_zone                        N1    -                               0
+passenger_count_filled         N1    -                               0
+passenger_missing              N1    -                               0
+zone_avg_dur_asof              N2    -                               0
+zone_avg_dur_7d                N3    -                               0
+leak_trip_distance             L1    R3                         100000
+leak_total_amount              L2    R1,R2                      100000
+leak_dropoff_hour              L3    R1,R2,R3                   100000
+leak_zone_avg_global           L4    R4                         100000
+zone_avg_dur_60m               N5    -                               0
+leak_zone_avg_60m_self         L5    R4                         100000
+leak_zone_avg_60m_inprogress   L6    R4                          98211
+leak_fare_correction           L7    R1,R2                      100000
+leak_snapshot_zone_avg         L8    R1,R2                      100000
+leak_last_fare_zone            L9    R2                          90309
+
+secenarios tables :
+--- Scenario features: coverage ---
+┌────────┬──────────────┬─────────────────┬───────────────────┐
+│ n_rows │ pct_null_60m │ pct_null_inprog │ pct_null_lastfare │
+│ int64  │    double    │     double      │      double       │
+├────────┼──────────────┼─────────────────┼───────────────────┤
+│ 100000 │         0.82 │            0.75 │             0.002 │
+└────────┴──────────────┴─────────────────┴───────────────────┘
+
+--- Correlation with the target ---
+┌───────────────┬───────────┬─────────────┬────────────────┬───────────────┬────────────────┐
+│ r_N5_safe_60m │ r_L5_self │ r_L6_inprog │ r_L7_fare_corr │ r_L8_snapshot │ r_L9_last_fare │
+│    double     │  double   │   double    │     double     │    double     │     double     │
+├───────────────┼───────────┼─────────────┼────────────────┼───────────────┼────────────────┤
+│         0.541 │     0.617 │       0.566 │          0.771 │         0.536 │          0.344 │
+└───────────────┴───────────┴─────────────┴────────────────┴───────────────┴────────────────┘
+
+--- L9: how often was the looked-up fare not yet available? ---
+┌───────────────────────┬────────────────────────┐
+│ pct_not_yet_available │ mean_min_since_dropoff │
+│        double         │         double         │
+├───────────────────────┼────────────────────────┤
+│                  90.3 │                   3.72 │
+└───────────────────────┴────────────────────────┘
+- Timings on laptop:
+[ok] ingestion                    9.4s
+[ok] availability times           4.6s
+[ok] prediction examples          0.7s
+[ok] feature tables               3.7s
+[ok] point-in-time features       1.6s
+[ok] scenario features            9.4s
+Total: 29.4s

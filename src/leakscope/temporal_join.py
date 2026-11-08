@@ -44,6 +44,44 @@ def build_pit_features(con, examples="row_features", cum="zone_cum",
         JOIN prev_totals p USING (trip_id)
     """)
 
+def build_lookback(con, minutes, out, examples="row_features",
+                   cum="zone_cum", time_col="avail_dropoff"):
+    """Count, sum and mean of duration over the window (t_pred - minutes, t_pred].
+
+    `cum` holds running totals per zone ordered by `time_col`. The window
+    total is the running total at t_pred minus the running total at
+    (t_pred - minutes). Both lookups are ASOF joins with >=, so a row whose
+    time equals the right edge is included and one on the left edge is not.
+    """
+    if time_col not in {"avail_dropoff", "event_pickup"}:
+        raise ValueError(f"unsupported time column {time_col!r}")
+    con.execute(f"DROP TABLE IF EXISTS {out}")
+    con.execute(f"""
+        CREATE TABLE {out} AS
+        WITH ex AS (
+            SELECT trip_id, pu_zone, t_pred,
+                   t_pred - INTERVAL {int(minutes)} MINUTE AS t_prev
+            FROM {examples}
+        ),
+        now_totals AS (
+            SELECT ex.trip_id, c.cum_sum AS s_now, c.cum_cnt AS n_now
+            FROM ex ASOF LEFT JOIN {cum} c
+              ON ex.pu_zone = c.pu_zone AND ex.t_pred >= c.{time_col}
+        ),
+        prev_totals AS (
+            SELECT ex.trip_id, c.cum_sum AS s_prev, c.cum_cnt AS n_prev
+            FROM ex ASOF LEFT JOIN {cum} c
+              ON ex.pu_zone = c.pu_zone AND ex.t_prev >= c.{time_col}
+        ),
+        diffs AS (
+            SELECT n.trip_id,
+                   coalesce(n.n_now, 0) - coalesce(p.n_prev, 0) AS n_win,
+                   coalesce(n.s_now, 0) - coalesce(p.s_prev, 0) AS sum_win
+            FROM now_totals n JOIN prev_totals p USING (trip_id)
+        )
+        SELECT trip_id, n_win, sum_win, sum_win / nullif(n_win, 0) AS avg_win
+        FROM diffs
+    """)
 
 def build_all(cfg):
     lookback = next(

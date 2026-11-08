@@ -109,3 +109,74 @@ features:
     group_by: pu_zone
     window: whole_dataset
     includes_current_row: true
+
+
+  - name: zone_avg_dur_60m
+    kind: aggregate
+    scenario: N5
+    source: "zone_cum"
+    transformation: "mean duration_min of same-zone trips with avail_dropoff in (t_pred - 60 min, t_pred]"
+    event_time: event_dropoff
+    availability_time: avail_dropoff
+    declared_post_outcome: false
+    group_by: pu_zone
+    window: lookback
+    lookback_minutes: 60
+    window_clock: avail_dropoff
+    includes_current_row: false
+
+  - name: leak_zone_avg_60m_self
+    kind: aggregate
+    scenario: L5
+    source: "zone_cum + the example's own trip"
+    transformation: "60-minute availability-based zone average PLUS the example's own duration"
+    event_time: event_dropoff
+    availability_time: avail_dropoff
+    declared_post_outcome: false
+    group_by: pu_zone
+    window: lookback
+    lookback_minutes: 60
+    window_clock: avail_dropoff
+    includes_current_row: true
+
+  - name: leak_zone_avg_60m_inprogress
+    kind: aggregate
+    scenario: L6
+    source: "zone_cum_pickup"
+    transformation: "mean duration of same-zone trips PICKED UP in (t_pred - 60 min, t_pred], including trips still in progress"
+    event_time: event_dropoff
+    availability_time: avail_dropoff
+    declared_post_outcome: false
+    group_by: pu_zone
+    window: lookback
+    lookback_minutes: 60
+    window_clock: event_pickup
+    includes_current_row: false
+
+  - name: leak_fare_correction
+    kind: row
+    scenario: L7
+    source: "clean_trips.fare_amount"
+    transformation: "identity (simulated next-day corrected fare of the trip itself)"
+    event_time: event_dropoff
+    availability_time: avail_fare_correction
+    declared_post_outcome: false
+
+  - name: leak_snapshot_zone_avg
+    kind: row
+    scenario: L8
+    source: "zone_cum snapshot taken at the end of the pickup day"
+    transformation: "zone average duration as of the end of the prediction day (joined on date, not on time)"
+    event_time: event_snapshot_eod
+    availability_time: avail_snapshot_eod
+    declared_post_outcome: false
+
+  - name: leak_last_fare_zone
+    kind: row
+    scenario: L9
+    source: "clean_trips.total_amount of the last completed trip in the zone"
+    transformation: "latest same-zone trip with event_dropoff <= t_pred (should have used avail_fare)"
+    event_time: event_dropoff
+    availability_time: avail_fare
+    declared_post_outcome: false
+    source_record: lookup

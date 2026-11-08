@@ -31,7 +31,10 @@ def build_availability(cfg):
                     + INTERVAL {int(a['fare_lag_min'])} MINUTE           AS avail_fare,
                 date_trunc('day', tpep_dropoff_datetime) + INTERVAL 1 DAY
                     + INTERVAL {int(a['fare_correction_next_day_hour'])} HOUR
-                                                                         AS avail_fare_correction
+                                                                         AS avail_fare_correction,
+                -- end-of-day snapshot clocks (used by scenario L8)
+                date_trunc('day', tpep_pickup_datetime) + INTERVAL 1 DAY AS event_snapshot_eod,
+                date_trunc('day', tpep_pickup_datetime) + INTERVAL 1 DAY AS avail_snapshot_eod
             FROM clean_trips
         """)
     finally:

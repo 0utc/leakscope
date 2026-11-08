@@ -43,6 +43,10 @@ is <= t_pred, within a lookback window.
 Rule notes: R1 implies R2 whenever metadata is consistent (availability >= event),
 so R1 is the stronger diagnosis (the feature describes something that had not yet
 happened) and R2 alone means it happened but was not yet usable.
+R4 is evaluated against each aggregate's DECLARED definition (window, window clock,
+includes_current_row), and tests/test_conformance.py checks that the stored values follow
+the declaration. L5 and L6 use a 60-minute zone window. L9's source record is a looked-up
+trip, tracked in a lineage table.
 
 ## 6. Test scenarios (known expected outcomes)
 A scenario may trigger several rules. Each scenario's expected outcome is its
@@ -68,6 +72,7 @@ Negative controls (the auditor MUST NOT flag these):
 | N2 | Zone average using only trips with availability time <= t_pred |
 | N3 | 7-day lookback average over trips with availability time in (t_pred - 7 days, t_pred] |
 | N4 | Boundary case: a source trip available at exactly t_pred (valid under <=) |
+| N5 | 60-minute zone average over trips with availability time in (t_pred - 60 min, t_pred] |
 
 ## 7. Explicit limitations
 - Availability times are simulated, not observed.
