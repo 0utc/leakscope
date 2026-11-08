@@ -36,3 +36,8 @@ ml:
     max_iter: 200
     learning_rate: 0.1
     max_leaf_nodes: 31
+ 
+
+analysis:
+  n_boot: 2000                  # bootstrap resamples
+  seed: 0

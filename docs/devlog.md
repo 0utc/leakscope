@@ -279,3 +279,60 @@ Known limitation M1: aggregate whose declaration is false
   iterations on 69,899 training rows. 1.6 s for the corrected model (8 features), 1.6 to 2.2 s for the
   9-feature models, 2.5 s for ALL (17 features). About 21 s for all 11 models (sum of the rounded values;
   excludes loading the table and the audit). Test suite: 47 passed in 22.2 s.
+
+## 2026-11-08 (continued 3)
+- Phase 3 gate passed: analysis re-fit every model and reproduced results/ml_comparison.csv exactly
+  (MAE equal to 1e-9). 55 tests passed in 25.7s.
+- Method: hour-block bootstrap on the test set (168 hourly blocks, 2000 resamples, paired differences,
+  95% percentile intervals). Intervals cover test-set sampling only; training randomness is fixed by the
+  seed; one split, one week. Production conditions = leaky value replaced by what a correct point-in-time
+  service returns (missing for L1/L2/L3/L7; zone_avg_dur_asof for L4/L8; zone_avg_dur_60m for L5/L6;
+  last fare by availability clock for L9). This is a simulation under simulated availability times.
+- 1) Offline difference vs corrected (corrected MAE 6.809 [6.613, 6.999]), minutes, 95% CI:
+  | model | dMAE | dRMSE |
+  |---|---|---|
+  | L1 distance | -3.474 [-3.585, -3.361] | -4.323 [-4.546, -4.091] |
+  | L2 total amount | -4.119 [-4.246, -3.985] | -4.720 [-4.915, -4.509] |
+  | L3 dropoff hour | -0.441 [-0.493, -0.392] | -0.775 [-0.870, -0.680] |
+  | L4 global zone avg | -0.033 [-0.050, -0.015] | -0.003 [-0.036, +0.032] (n.s.) |
+  | L5 60m self | -2.447 [-2.540, -2.352] | -2.937 [-3.094, -2.778] |
+  | L6 in-progress | -0.005 [-0.030, +0.019] (n.s.) | +0.004 [-0.035, +0.047] (n.s.) |
+  | L7 fare correction | -4.663 [-4.807, -4.515] | -5.160 [-5.396, -4.910] |
+  | L8 snapshot | -0.008 [-0.025, +0.011] (n.s.) | +0.019 [-0.010, +0.047] (n.s.) |
+  | L9 last fare | -0.002 [-0.014, +0.009] (n.s.) | -0.003 [-0.025, +0.018] (n.s.) |
+  | ALL leaky | -5.357 [-5.520, -5.189] | -6.499 [-6.759, -6.227] |
+- 2) Production conditions (production MAE, difference vs corrected 6.809, 95% CI):
+  | model | offline MAE | production MAE | production - corrected |
+  |---|---|---|---|
+  | L1 | 3.335 | 8.643 | +1.835 [+1.709, +1.959] worse |
+  | L2 | 2.690 | 9.055 | +2.246 [+2.095, +2.394] worse |
+  | L3 | 6.368 | 8.079 | +1.270 [+0.926, +1.689] worse |
+  | L4 | 6.776 | 6.768 | -0.041 [-0.056, -0.024] better |
+  | L5 | 4.362 | 6.802 | -0.007 [-0.048, +0.034] no clear difference |
+  | L6 | 6.804 | 6.835 | +0.026 [+0.005, +0.048] worse (tiny) |
+  | L7 | 2.146 | 8.998 | +2.189 [+2.050, +2.327] worse |
+  | L8 | 6.801 | 6.833 | +0.024 [+0.000, +0.050] worse (borderline) |
+  | L9 | 6.806 | 6.813 | +0.004 [-0.009, +0.017] no clear difference |
+  | ALL | 1.451 | 8.461 | +1.652 [+1.509, +1.787] worse |
+- 3) Ablations (MAE without -> with the leak; main = effect in the full experiment):
+  - L5 without N5: 6.797 -> 6.588, dMAE -0.210 [-0.253, -0.167] = -3.1% (main -35.9%).
+  - L3 without pickup_hour: 6.949 -> 6.840, dMAE -0.109 [-0.146, -0.073] = -1.6% (main -6.5%).
+- Findings:
+  - Offline the leaky models look far better (ALL: MAE 1.451, -78.7%). In production the models that rely
+    on a value that does not yet exist (L1, L2, L7, ALL) are 24-33% WORSE than the corrected model
+    (MAE 8.46-9.06 vs 6.809), i.e. 2.6x to 5.8x their offline error, and above the constant-median
+    baseline (7.787). Baseline comparison not tested with intervals; L3's margin over it is only 0.29.
+  - L5's offline gain (-35.9%) vanishes in production (-0.007, n.s.): it was inflation only.
+  - Hypothesis from the previous entry supported: L5's gain needs N5 (effect shrinks ~12x without it);
+    L3's gain mostly needs pickup_hour (effect shrinks ~4x; the remaining -1.6% is plausibly dropoff hour
+    acting as a proxy for the missing pickup hour, untested). Removing N5 from the corrected model changed
+    MAE from 6.809 to 6.797 (not tested): N5 seems redundant for the honest model.
+  - CORRECTION to the previous entry: L4, L6, L8, L9 are practically invisible (< 3 seconds of MAE), but
+    only L6, L8, L9 are statistically indistinguishable from zero. L4's MAE change (-0.033 min) is
+    detectable [-0.050, -0.015]; its RMSE change is not.
+  - L4 under production conditions was slightly better than the corrected model (-0.041 min, ~2.5 s).
+    Untested explanation: the whole-month zone average is a steadier zone-level training feature than the
+    as-of one. This does NOT make L4 acceptable: it still uses information from after t_pred.
+  - Limits: one month, one chronological split, one model class, simulated availability lags (2 min fare
+    lag, next-day 06:00 corrections), serving substitutes chosen by us. Bootstrap by hour does not capture
+    day-level variation (only 7 test days).
