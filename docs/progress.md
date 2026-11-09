@@ -33,7 +33,8 @@
 
 ## Phase 4: Packaging
 - [x] Reports (Markdown + JSON + figures)
-- [ ] CLI
+- [x] CLI
+- [x] Synthetic demo data + one-command demo
 - [ ] CI + robustness tests
 - [ ] Benchmarks (10k/50k/200k)
 - [ ] README, docs, charts, demo
