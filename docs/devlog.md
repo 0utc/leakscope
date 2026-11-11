@@ -415,3 +415,40 @@ Largest absolute shift in any offline MAE: 0.0157 (RMSE: 0.0316), from `compare_
 | Production L3 moved by 0.167 | Its 95% interval was about 0.8 wide, so the shift is inside the sampling noise; cause unknown |
 | Production verdict for L8 changed from "worse" (interval lower end +0.0001) to "no clear difference" | A verdict flipped between builds; interpret verdicts near the interval edge with caution |
 | 9 tests are skipped in CI | Reason not yet checked |
+
+## 2026-11-11 (continued)
+
+### Cross-platform check
+
+| Item | Detail |
+|---|---|
+| Comparison | `ml_comparison.csv` from the demo: local Windows run vs GitHub Actions artifact (Ubuntu, Python 3.13) |
+| Result | Largest absolute difference 0.000e+00 in every column; agree to 1e-09: yes |
+| Scope | Synthetic demo data only; one CI configuration; other result files not compared |
+| Open | 9 tests are skipped in CI (none locally); reason not yet checked |
+
+
+## 2026-11-11 (continued 2)
+
+### CI skip reasons and coverage
+
+| Item | Detail |
+|---|---|
+| Change | `-rs` added to the pytest step in `.github/workflows/ci.yml` (commit 3f5ab66) |
+| Skip reasons (CI) | 9 skipped, all "local database not built": 6 in `test_conformance.py`, 1 each in `test_evaluation.py`, `test_scorecard.py`, `test_temporal_join.py`. CI has no real data, so the tests that need the database skip |
+| Coverage, CI (Ubuntu, Python 3.13) | 89 passed, 9 skipped; TOTAL 1341 statements, 190 missed, 86% |
+| Coverage, local (Windows, Python 3.13.11) | 98 passed, 0 skipped; TOTAL 1341 statements, 190 missed, 86% |
+
+### Correction of an earlier prediction
+
+| Earlier statement | Correction |
+|---|---|
+| Local coverage with all 98 tests would be fuller than CI's | Falsified: both runs give identical per-module numbers, so the 9 skipped tests add no covered lines |
+| Low coverage of `feature_builder`, `temporal_join`, `temporal_model` is due to skipped tests | Not supported. Open hypothesis: code run through CLI subprocesses is not measured by coverage |
+
+### Open
+
+| Item | Status |
+|---|---|
+| Subprocess hypothesis | Check with a search for `subprocess` in tests |
+| Low-coverage modules | `temporal_model` 51%, `feature_builder` 56%, `temporal_join` 56%, `registry` 67%, `ingestion` 69% |
