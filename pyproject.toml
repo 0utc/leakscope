@@ -8,12 +8,12 @@ version = "0.1.0"
 description = "Temporal data leakage auditor for ML pipelines"
 requires-python = ">=3.11"
 dependencies = [
-    "duckdb", "polars", "pyarrow", "scikit-learn", "pandas",
+    "duckdb", "pyarrow", "scikit-learn", "pandas",
     "pandera", "typer", "matplotlib", "pyyaml",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest"]
+dev = ["pytest", "pytest-cov"]
 
 [project.scripts]
 leakscope = "leakscope.cli:app"

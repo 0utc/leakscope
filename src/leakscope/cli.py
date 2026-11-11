@@ -9,11 +9,14 @@
 
 Run from the project root (the feature registry is read from configs/features.yaml).
 """
+import functools
 import time
 from pathlib import Path
 from typing import Annotated
 
 import typer
+
+from leakscope.checks import PipelineError
 
 app = typer.Typer(
     add_completion=False, no_args_is_help=True,
@@ -22,6 +25,16 @@ app = typer.Typer(
 Config = Annotated[Path, typer.Option("--config", "-c", help="YAML config file.")]
 DEFAULT_CONFIG = Path("configs/taxi.yaml")
 
+def guarded(fn):
+    """Show a PipelineError as a short message (exit code 2) instead of a traceback."""
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        try:
+            return fn(*args, **kwargs)
+        except PipelineError as e:
+            typer.secho(f"ERROR: {e}", err=True, fg=typer.colors.RED)
+            raise typer.Exit(2)
+    return wrapper
 
 def _need(path):
     if not Path(path).exists():
@@ -75,6 +88,7 @@ def synthetic(
 
 
 @app.command()
+@guarded
 def pipeline(config: Config = DEFAULT_CONFIG):
     """Build the DuckDB database: cleaning, availability times, features."""
     _need(config)
@@ -83,6 +97,7 @@ def pipeline(config: Config = DEFAULT_CONFIG):
 
 
 @app.command()
+@guarded
 def audit(
     config: Config = DEFAULT_CONFIG,
     explain: Annotated[bool, typer.Option("--explain/--no-explain",
@@ -94,6 +109,7 @@ def audit(
 
 
 @app.command()
+@guarded
 def experiment(
     config: Config = DEFAULT_CONFIG,
     out: Annotated[Path, typer.Option("--out", help="Results folder.")] = Path("results"),
@@ -110,6 +126,7 @@ def experiment(
 
 
 @app.command()
+@guarded
 def report(
     config: Config = DEFAULT_CONFIG,
     out: Annotated[Path, typer.Option("--out", help="Results folder.")] = Path("results"),
@@ -122,6 +139,7 @@ def report(
 
 
 @app.command()
+@guarded
 def demo(
     work_dir: Annotated[Path, typer.Option(help="Private folder for data and database.")]
     = Path("demo_work"),

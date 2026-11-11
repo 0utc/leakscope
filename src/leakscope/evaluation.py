@@ -22,8 +22,10 @@ from sklearn.ensemble import HistGradientBoostingRegressor
 
 from leakscope import scenarios
 from leakscope.audit_scoring import evaluate_features
+from leakscope.checks import PipelineError
 from leakscope.ingestion import connect, load_config
 from leakscope.registry import load_registry
+from leakscope.schema import validate_model_table
 
 SOURCE_ALIAS = {"row_features": "r", "pit_features": "p", "scenario_features": "s"}
 
@@ -60,7 +62,7 @@ def build_model_table(con, features):
         ORDER BY r.t_pred, r.trip_id
     """).df()
     df[names] = df[names].astype("float64")
-    return df
+    return validate_model_table(df, names)
 
 
 def chronological_split(df, test_start):
@@ -68,6 +70,11 @@ def chronological_split(df, test_start):
     cutoff = pd.Timestamp(test_start)
     train = df[df["label_available_at"] <= cutoff]
     test = df[df["t_pred"] >= cutoff]
+    if len(train) == 0 or len(test) == 0:
+        raise PipelineError(
+            f"the split at {cutoff} leaves {len(train)} training and {len(test)} test "
+            f"examples (examples run from {df['t_pred'].min()} to {df['t_pred'].max()}); "
+            f"change ml.test_start in the config")
     return train, test, len(df) - len(train) - len(test)
 
 

@@ -8,10 +8,14 @@ from pathlib import Path
 import duckdb
 import yaml
 
+from leakscope.checks import validate_config
+
 
 def load_config(path):
     with open(path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+        cfg = yaml.safe_load(f)
+    validate_config(cfg)
+    return cfg
 
 
 def connect(cfg):
