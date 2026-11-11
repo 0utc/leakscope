@@ -34,8 +34,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
-      - name: Run the tests (with coverage)
-        run: pytest -q --cov=leakscope --cov-report=term
+      - name: Run the tests (with coverage, skip reasons shown)
+        run: pytest -q -rs --cov=leakscope --cov-report=term
 
       - name: One-command demo on synthetic data
         run: python -m leakscope demo
