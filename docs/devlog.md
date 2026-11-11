@@ -370,29 +370,48 @@
   production", which is false for L4, L5 and L9 on this data.
 - Tests: 62 passed (47.8 s).
 
-## 2026-11-09
 
-- Phase 4, step 2: CLI (Typer) and one-command demo. Commands: demo, synthetic, pipeline, audit,
-  experiment, report; `python -m leakscope <command>` and the `leakscope` console script
-  (pyproject [project.scripts], reinstalled with pip install -e .). The ML comparison is called
-  `experiment`, not `benchmark` as in the project document, because `benchmark` is reserved for the
-  performance measurements (runtime/memory/data volume). `audit` exits with code 1 on a scorecard
-  mismatch (for CI).
-- Synthetic data (synthetic.py): same 19 columns/types as TLC, deterministic by seed, structured
-  (distance/fare correlate with duration, rush hours slower) with a little dirt. The demo config reuses
-  the real config's settings (lags, cleaning, ML) with private paths (demo_work/, demo_results/), so the
-  demo never touches the real database or results (confirmed: git status shows no changes in
-  results/ or assets/ after running it).
-- Demo on the laptop: 45 s for 120,000 synthetic trips / 20,000 examples (pipeline 10.1 s: first-run
-  effects, so benchmarks will use repeated runs and the median). Scorecard 19/19; conformance all
-  conforms; M1 missed by R1-R4 and caught by conformance (5 mismatches).
-- Demo numbers are SYNTHETIC and must not be quoted as results. Example: corrected MAE 5.759 vs median
-  baseline 6.120; all-leaky offline MAE 1.206 vs 6.388 in production conditions.
-- Informal cross-check, NOT yet a verified result: the numbers printed by the demo matched those of a
-  separate run made on Linux by the AI assistant during development (compared by eye on the printed
-  lines; library versions not compared; the author cannot re-run that environment). A verifiable
-  cross-platform check will come from the GitHub Actions run on Ubuntu, to be compared with this
-  Windows run.
-- Margin check: the tiny end-to-end test setup (10k trips, 2.5k examples) gave 19/19 for seeds 1-6,
-  with hundreds of rows flagged for L6 and L9, so the end-to-end test is not borderline.
-- Tests: 70 passed in 63.0 s (includes a full end-to-end demo run through the CLI).
+## 2026-11-11
+
+### Defect: feature tables not reproducible across database rebuilds
+
+| Item | Detail |
+|---|---|
+| Symptom | Rebuilding the DuckDB database changed some feature values at the 1e-13 level; the L6 offline MAE moved from 6.804 to 6.796 |
+| Cause (diagnosis) | Float sums over rows with tied timestamps in DuckDB window functions are order-dependent. Supported by the fix and test; not traced inside DuckDB |
+| Fix | Accumulate integer seconds in `feature_builder.create_zone_cum` and `create_zone_global`; new `tests/test_determinism.py` |
+| Verification (Windows) | `pytest -q`: 98 passed. Two separate rebuilds compared with `compare_runs.py`: difference 0.000e+00 in every column |
+| Verification (CI) | GitHub Actions green on all jobs. Ubuntu, Python 3.13: 89 passed, 9 skipped, coverage 86% (1341 statements, 190 missed) |
+
+### Correction of an earlier claim
+
+| Earlier statement | Correction |
+|---|---|
+| "Offline MAEs reproduce results to 1e-9" | That check only compared refits on one database, not rebuilds of the database |
+
+### Old (commit 3693b25) vs new results, real data, 100k examples
+
+| Experiment | Offline MAE old | Offline MAE new | Production MAE old | Production MAE new |
+|---|---|---|---|---|
+| Corrected | 6.809 | 6.817 | | |
+| L1 | 3.335 | 3.332 | 8.643 | 8.626 |
+| L2 | 2.690 | 2.706 | 9.055 | 9.075 |
+| L3 | 6.368 | 6.368 | 8.079 | 7.912 |
+| L4 | 6.776 | 6.766 | 6.768 | 6.762 |
+| L5 | 4.362 | 4.372 | 6.802 | 6.806 |
+| L6 | 6.804 | 6.801 | 6.835 | 6.842 |
+| L7 | 2.146 | 2.153 | 8.998 | 9.035 |
+| L8 | 6.801 | 6.797 | 6.833 | 6.822 |
+| L9 | 6.806 | 6.811 | 6.813 | 6.809 |
+| ALL | 1.451 | 1.451 | 8.461 | 8.471 |
+
+Largest absolute shift in any offline MAE: 0.0157 (RMSE: 0.0316), from `compare_runs.py`.
+
+### Observations (not explained)
+
+| Observation | Status |
+|---|---|
+| The corrected model also moved (+0.008), so the fix changed more than the L6 feature | Which valid features changed is untested |
+| Production L3 moved by 0.167 | Its 95% interval was about 0.8 wide, so the shift is inside the sampling noise; cause unknown |
+| Production verdict for L8 changed from "worse" (interval lower end +0.0001) to "no clear difference" | A verdict flipped between builds; interpret verdicts near the interval edge with caution |
+| 9 tests are skipped in CI | Reason not yet checked |
