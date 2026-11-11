@@ -1,40 +1,50 @@
-"""Build feature source tables and row-level features.
-
-zone_cum    : running totals per zone ordered by availability time (the
-              'bank statement' used for point-in-time lookups)
-zone_global : whole-dataset zone averages (used ONLY as a leaky feature)
-row_features: one row per prediction example with safe and leaky row-level
-              features, plus the target.
-"""
+"""Build feature source tables and row-level features."""
 from leakscope.ingestion import connect, load_config
 
-def create_zone_cum(con):
-    """Running totals per zone ordered by availability time."""
-    con.execute("DROP TABLE IF EXISTS zone_cum")
-    con.execute("""
-        CREATE TABLE zone_cum AS
+CUM_TABLES = {"avail_dropoff": "zone_cum", "event_pickup": "zone_cum_pickup"}
+
+
+def create_zone_cum(con, order_col="avail_dropoff", out="zone_cum"):
+    """Running totals of duration per zone, ordered by `order_col`.
+
+    Durations are accumulated as INTEGER SECONDS, so the sums are exact and do not
+    depend on the order in which rows with the same timestamp are added; the total
+    is converted to minutes only at the end. Adding decimal minutes instead made
+    rebuilds differ at the 1e-13 level, which was enough to change model scores.
+    """
+    if order_col not in CUM_TABLES or out != CUM_TABLES[order_col]:
+        raise ValueError(f"unsupported cumulative table {out!r} ordered by {order_col!r}")
+    con.execute(f"DROP TABLE IF EXISTS {out}")
+    con.execute(f"""
+        CREATE TABLE {out} AS
         SELECT pu_zone,
-               avail_dropoff,
-               sum(duration_min) OVER w AS cum_sum,
-               count(*)          OVER w AS cum_cnt
+               {order_col},
+               (sum(CAST(round(duration_min * 60) AS BIGINT)) OVER w) / 60.0 AS cum_sum,
+               count(*) OVER w AS cum_cnt
         FROM trip_times
-        WINDOW w AS (PARTITION BY pu_zone ORDER BY avail_dropoff)
+        WINDOW w AS (PARTITION BY pu_zone ORDER BY {order_col})
     """)
+
+
+def create_zone_global(con):
+    """Whole-dataset zone averages (used ONLY as a leaky feature), from integer seconds."""
+    con.execute("DROP TABLE IF EXISTS zone_global")
+    con.execute("""
+        CREATE TABLE zone_global AS
+        SELECT pu_zone,
+               (sum(CAST(round(duration_min * 60) AS BIGINT)) / 60.0) / count(*)
+                   AS zone_avg_global,
+               count(*) AS n_trips
+        FROM trip_times
+        GROUP BY pu_zone
+    """)
+
 
 def build_feature_tables(cfg):
     con = connect(cfg)
     try:
         create_zone_cum(con)
-
-        con.execute("DROP TABLE IF EXISTS zone_global")
-        con.execute("""
-            CREATE TABLE zone_global AS
-            SELECT pu_zone,
-                   avg(duration_min) AS zone_avg_global,
-                   count(*)          AS n_trips
-            FROM trip_times
-            GROUP BY pu_zone
-        """)
+        create_zone_global(con)
 
         con.execute("DROP TABLE IF EXISTS row_features")
         con.execute("""
@@ -43,13 +53,11 @@ def build_feature_tables(cfg):
                 p.trip_id,
                 p.t_pred,
                 p.target_duration_min,
-                -- valid row-level features (N1)
                 hour(p.t_pred)                     AS pickup_hour,
                 dayofweek(p.t_pred)                AS pickup_dow,
                 c.PULocationID                     AS pu_zone,
                 coalesce(c.passenger_count, 1)     AS passenger_count_filled,
                 (c.passenger_count IS NULL)::INT   AS passenger_missing,
-                -- intentionally leaky features
                 c.trip_distance                    AS leak_trip_distance,
                 c.total_amount                     AS leak_total_amount,
                 hour(c.tpep_dropoff_datetime)      AS leak_dropoff_hour,

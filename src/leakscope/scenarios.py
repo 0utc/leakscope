@@ -41,15 +41,7 @@ SCENARIO_NAMES = {
 
 def build_scenario_features(con, examples="row_features", window_min=WINDOW_MIN):
     # running totals ordered by PICKUP time (used by the faulty L6 window)
-    con.execute("DROP TABLE IF EXISTS zone_cum_pickup")
-    con.execute("""
-        CREATE TABLE zone_cum_pickup AS
-        SELECT pu_zone, event_pickup,
-               sum(duration_min) OVER w AS cum_sum,
-               count(*)          OVER w AS cum_cnt
-        FROM trip_times
-        WINDOW w AS (PARTITION BY pu_zone ORDER BY event_pickup)
-    """)
+    create_zone_cum(con, "event_pickup", "zone_cum_pickup")
     build_lookback(con, window_min, "win_avail", examples,
                    cum="zone_cum", time_col="avail_dropoff")
     build_lookback(con, window_min, "win_pickup", examples,

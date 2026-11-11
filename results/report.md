@@ -5,8 +5,8 @@
 ## Summary
 
 - **Audit:** 10 of 10 leaky features were flagged and 9 of 9 valid features were left alone (feature level: precision 1.000, recall 1.000; rule level: precision 1.000, recall 1.000). The scenarios were designed together with the auditor, so this shows that the implementation matches its specification, not that all leakage is caught (see section 3).
-- **Honest model:** MAE 6.809 min on the test week, against 7.787 for a constant-median baseline.
-- **Offline vs production:** with all leaky features the offline MAE is 1.451 min (-78.7% vs the honest model). When the leaked values are not available at prediction time the same model scores 8.461 min (+24.3% vs the honest model).
+- **Honest model:** MAE 6.817 min on the test week, against 7.787 for a constant-median baseline.
+- **Offline vs production:** with all leaky features the offline MAE is 1.451 min (-78.7% vs the honest model). When the leaked values are not available at prediction time the same model scores 8.471 min (+24.3% vs the honest model).
 
 ![fig_offline_vs_production.png](../assets/fig_offline_vs_production.png)
 
@@ -84,17 +84,17 @@ Same algorithm (HistGradientBoostingRegressor), same seed (0), purged chronologi
 
 | Experiment | MAE [95% CI] | dMAE vs corrected | dRMSE vs corrected | MAE difference | Rows flagged |
 |---|---|---|---|---|---|
-| corrected (valid features only) | 6.809 [6.613, 6.999] | (reference) | (reference) | - | - |
-| + L1 leak_trip_distance | 3.335 [3.211, 3.456] | -3.474 [-3.585, -3.361] | -4.323 [-4.546, -4.091] | clearly lower | 100.0% |
-| + L2 leak_total_amount | 2.690 [2.601, 2.775] | -4.119 [-4.246, -3.985] | -4.720 [-4.915, -4.509] | clearly lower | 100.0% |
-| + L3 leak_dropoff_hour | 6.368 [6.204, 6.526] | -0.441 [-0.493, -0.392] | -0.775 [-0.870, -0.680] | clearly lower | 100.0% |
-| + L4 leak_zone_avg_global | 6.776 [6.585, 6.965] | -0.033 [-0.050, -0.015] | -0.003 [-0.036, +0.032] | clearly lower | 100.0% |
-| + L5 leak_zone_avg_60m_self | 4.362 [4.212, 4.511] | -2.447 [-2.540, -2.352] | -2.937 [-3.094, -2.778] | clearly lower | 100.0% |
-| + L6 leak_zone_avg_60m_inprogress | 6.804 [6.611, 6.993] | -0.005 [-0.030, +0.019] | +0.004 [-0.035, +0.047] | not distinguishable from 0 | 98.2% |
-| + L7 leak_fare_correction | 2.146 [2.064, 2.222] | -4.663 [-4.807, -4.515] | -5.160 [-5.396, -4.910] | clearly lower | 100.0% |
-| + L8 leak_snapshot_zone_avg | 6.801 [6.609, 6.991] | -0.008 [-0.025, +0.011] | +0.019 [-0.010, +0.047] | not distinguishable from 0 | 100.0% |
-| + L9 leak_last_fare_zone | 6.806 [6.612, 6.994] | -0.002 [-0.014, +0.009] | -0.003 [-0.025, +0.018] | not distinguishable from 0 | 90.3% |
-| + ALL leaky features | 1.451 [1.401, 1.504] | -5.357 [-5.520, -5.189] | -6.499 [-6.759, -6.227] | clearly lower | - |
+| corrected (valid features only) | 6.817 [6.622, 7.007] | (reference) | (reference) | - | - |
+| + L1 leak_trip_distance | 3.332 [3.208, 3.454] | -3.485 [-3.592, -3.375] | -4.332 [-4.557, -4.106] | clearly lower | 100.0% |
+| + L2 leak_total_amount | 2.706 [2.618, 2.791] | -4.112 [-4.237, -3.978] | -4.718 [-4.920, -4.504] | clearly lower | 100.0% |
+| + L3 leak_dropoff_hour | 6.368 [6.202, 6.527] | -0.449 [-0.499, -0.402] | -0.788 [-0.883, -0.692] | clearly lower | 100.0% |
+| + L4 leak_zone_avg_global | 6.766 [6.576, 6.956] | -0.051 [-0.071, -0.033] | -0.036 [-0.069, -0.004] | clearly lower | 100.0% |
+| + L5 leak_zone_avg_60m_self | 4.372 [4.220, 4.522] | -2.446 [-2.541, -2.348] | -2.952 [-3.115, -2.791] | clearly lower | 100.0% |
+| + L6 leak_zone_avg_60m_inprogress | 6.801 [6.607, 6.987] | -0.017 [-0.041, +0.006] | -0.002 [-0.041, +0.038] | not distinguishable from 0 | 98.2% |
+| + L7 leak_fare_correction | 2.153 [2.069, 2.232] | -4.664 [-4.810, -4.517] | -5.142 [-5.378, -4.889] | clearly lower | 100.0% |
+| + L8 leak_snapshot_zone_avg | 6.797 [6.605, 6.986] | -0.020 [-0.038, -0.001] | -0.007 [-0.035, +0.019] | clearly lower | 100.0% |
+| + L9 leak_last_fare_zone | 6.811 [6.619, 6.997] | -0.007 [-0.025, +0.011] | -0.002 [-0.025, +0.020] | not distinguishable from 0 | 90.3% |
+| + ALL leaky features | 1.451 [1.400, 1.504] | -5.366 [-5.530, -5.203] | -6.509 [-6.765, -6.243] | clearly lower | - |
 
 Intervals: 95% percentile, paired hour-block bootstrap (resampling whole hours of the test week).
 
@@ -106,16 +106,16 @@ Intervals: 95% percentile, paired hour-block bootstrap (resampling whole hours o
 
 | Experiment | Offline MAE | Production MAE | Production - corrected [95% CI] | Verdict |
 |---|---|---|---|---|
-| + L1 leak_trip_distance | 3.335 | 8.643 | +1.835 [+1.709, +1.959] | worse |
-| + L2 leak_total_amount | 2.690 | 9.055 | +2.246 [+2.095, +2.394] | worse |
-| + L3 leak_dropoff_hour | 6.368 | 8.079 | +1.270 [+0.926, +1.689] | worse |
-| + L4 leak_zone_avg_global | 6.776 | 6.768 | -0.041 [-0.056, -0.024] | better |
-| + L5 leak_zone_avg_60m_self | 4.362 | 6.802 | -0.007 [-0.048, +0.034] | no clear difference |
-| + L6 leak_zone_avg_60m_inprogress | 6.804 | 6.835 | +0.026 [+0.005, +0.048] | worse |
-| + L7 leak_fare_correction | 2.146 | 8.998 | +2.189 [+2.050, +2.327] | worse |
-| + L8 leak_snapshot_zone_avg | 6.801 | 6.833 | +0.024 [+0.000, +0.050] | worse |
-| + L9 leak_last_fare_zone | 6.806 | 6.813 | +0.004 [-0.009, +0.017] | no clear difference |
-| + ALL leaky features | 1.451 | 8.461 | +1.652 [+1.509, +1.787] | worse |
+| + L1 leak_trip_distance | 3.332 | 8.626 | +1.808 [+1.678, +1.940] | worse |
+| + L2 leak_total_amount | 2.706 | 9.075 | +2.257 [+2.103, +2.408] | worse |
+| + L3 leak_dropoff_hour | 6.368 | 7.912 | +1.095 [+0.773, +1.482] | worse |
+| + L4 leak_zone_avg_global | 6.766 | 6.762 | -0.055 [-0.075, -0.036] | better |
+| + L5 leak_zone_avg_60m_self | 4.372 | 6.806 | -0.012 [-0.052, +0.030] | no clear difference |
+| + L6 leak_zone_avg_60m_inprogress | 6.801 | 6.842 | +0.025 [+0.002, +0.046] | worse |
+| + L7 leak_fare_correction | 2.153 | 9.035 | +2.218 [+2.076, +2.358] | worse |
+| + L8 leak_snapshot_zone_avg | 6.797 | 6.822 | +0.004 [-0.017, +0.026] | no clear difference |
+| + L9 leak_last_fare_zone | 6.811 | 6.809 | -0.008 [-0.025, +0.008] | no clear difference |
+| + ALL leaky features | 1.451 | 8.471 | +1.653 [+1.513, +1.789] | worse |
 
 Serving values are simulated: missing for the trip's own outcome fields, the correctly timed version of the feature otherwise.
 
@@ -123,8 +123,8 @@ Serving values are simulated: missing for the trip's own outcome fields, the cor
 
 | Ablation | MAE without leak | MAE with leak | dMAE [95% CI] | dMAE % | Effect in the full experiment |
 |---|---|---|---|---|---|
-| L5 without N5 (safe 60-min average removed) | 6.797 | 6.588 | -0.210 [-0.253, -0.167] | -3.1 | -35.9% |
-| L3 without pickup_hour | 6.949 | 6.840 | -0.109 [-0.146, -0.073] | -1.6 | -6.5% |
+| L5 without N5 (safe 60-min average removed) | 6.797 | 6.586 | -0.212 [-0.256, -0.169] | -3.1 | -35.9% |
+| L3 without pickup_hour | 6.962 | 6.841 | -0.121 [-0.159, -0.085] | -1.7 | -6.6% |
 
 ## 3. Limitations and assumptions
 
