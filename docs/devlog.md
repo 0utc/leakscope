@@ -438,17 +438,132 @@ Largest absolute shift in any offline MAE: 0.0157 (RMSE: 0.0316), from `compare_
 | Skip reasons (CI) | 9 skipped, all "local database not built": 6 in `test_conformance.py`, 1 each in `test_evaluation.py`, `test_scorecard.py`, `test_temporal_join.py`. CI has no real data, so the tests that need the database skip |
 | Coverage, CI (Ubuntu, Python 3.13) | 89 passed, 9 skipped; TOTAL 1341 statements, 190 missed, 86% |
 | Coverage, local (Windows, Python 3.13.11) | 98 passed, 0 skipped; TOTAL 1341 statements, 190 missed, 86% |
+| Test duration, local (2-core laptop) | 98 tests with coverage: 171 s; 103 tests: 181 s (70 tests earlier: 63 s). The end-to-end tests dominate |
 
-### Correction of an earlier prediction
+### Corrections of earlier predictions
 
 | Earlier statement | Correction |
 |---|---|
 | Local coverage with all 98 tests would be fuller than CI's | Falsified: both runs give identical per-module numbers, so the 9 skipped tests add no covered lines |
-| Low coverage of `feature_builder`, `temporal_join`, `temporal_model` is due to skipped tests | Not supported. Open hypothesis: code run through CLI subprocesses is not measured by coverage |
+| Low coverage of `feature_builder`, `temporal_join` and `temporal_model` is due to the skipped tests | Not supported: same numbers with and without the skipped tests |
+| Code run through CLI subprocesses is not measured by coverage | Falsified: no use of `subprocess` in `tests/` |
 
-### Open
+### Cause of the low coverage (resolved)
 
-| Item | Status |
+| Module (coverage) | Missed lines | What they are |
+|---|---|---|
+| `temporal_model` (51%) | 69-103, 107-115 | `verify()` printer and `__main__` block |
+| `temporal_join` (56%) | 99-119, 123-130 | `verify()` printer and `__main__` block |
+| `feature_builder` (56%) | 16, 75-98, 102-109 | one error branch, `verify()` printer, `__main__` block |
+| `ingestion` (69%) | 83-110, 114-121 | `summarize()` printer and `__main__` block |
+| `scenarios` (74%) | 117-148, 239-245 | `verify()` printer and `__main__` block |
+| `registry` (67%) | 99-108 and 17 single lines | `__main__` block and validation-failure branches |
+| `auditor` (81%), `audit_scoring` (92%) | 236-265, 134-144 | `print_report()` and `run()` printing wrappers, `__main__` blocks |
+| `__main__.py` (0%) | 1-3 | module entry point (the CI demo step runs it) |
+
+| Item | Detail |
 |---|---|
-| Subprocess hypothesis | Check with a search for `subprocess` in tests |
-| Low-coverage modules | `temporal_model` 51%, `feature_builder` 56%, `temporal_join` 56%, `registry` 67%, `ingestion` 69% |
+| Conclusion | The gaps are diagnostic printing functions, `__main__` blocks and error branches that no test triggers; the core logic is covered |
+| Evidence level | Line numbers match function boundaries exactly for `feature_builder` and `registry` (compared with the assistant's copies) and within 1-3 lines for `scenarios`, `auditor`, `audit_scoring`. For `temporal_model`, `temporal_join` and `ingestion` the ranges are consistent with the sizes of the printer functions; their source was not compared line by line |
+| Wording allowed | "86% line coverage (pytest-cov); diagnostic print functions and `__main__` entry points are not executed by the tests" |
+
+### Process notes
+
+| Note | Detail |
+|---|---|
+| Devlog corrupted once | An entry was pasted into PowerShell instead of the editor; `docs/devlog.md` was restored with `git checkout` and the entry re-added in VS Code |
+| Wrong command | A `compare_runs.py` call used a folder instead of a file path |
+
+## 2026-11-13
+
+### Float-noise sensitivity of the model scores (offline MAE, real data)
+
+| Item | Detail |
+|---|---|
+| Question | How far do scores move when the sum-based features change at float-noise level (the size of the earlier rebuild defect)? |
+| Method | Multiply the 7 sum-based features by (1 + rel x N(0,1)); refit all 11 models; model seed and split fixed |
+| Runs | 20 refits at relative noise 1e-13 (`results/ml_sensitivity.csv`); 10 refits at 1e-9 (table below only, file not kept) |
+| Code | `sensitivity.py`, `python -m leakscope sensitivity`, `tests/test_sensitivity.py`; suite: 103 passed in 181 s |
+
+### Results, relative noise 1e-13 (20 runs)
+
+| model | reference MAE | mean | SD | min | max | effect vs corrected (mean) | paired SD | runs lower |
+|---|---|---|---|---|---|---|---|---|
+| corrected | 6.817 | 6.798 | 0.0073 | 6.778 | 6.808 | (reference) | | |
+| L1 | 3.332 | 3.329 | 0.0050 | 3.317 | 3.339 | -3.4690 | 0.0102 | 20/20 |
+| L2 | 2.706 | 2.693 | 0.0139 | 2.673 | 2.716 | -4.1056 | 0.0177 | 20/20 |
+| L3 | 6.368 | 6.372 | 0.0089 | 6.361 | 6.391 | -0.4261 | 0.0131 | 20/20 |
+| L4 | 6.766 | 6.770 | 0.0098 | 6.755 | 6.791 | -0.0287 | 0.0128 | 20/20 |
+| L5 | 4.372 | 4.361 | 0.0181 | 4.332 | 4.397 | -2.4378 | 0.0182 | 20/20 |
+| L6 | 6.801 | 6.805 | 0.0071 | 6.789 | 6.822 | +0.0064 | 0.0120 | 5/20 |
+| L7 | 2.153 | 2.138 | 0.0029 | 2.133 | 2.147 | -4.6606 | 0.0077 | 20/20 |
+| L8 | 6.797 | 6.790 | 0.0100 | 6.773 | 6.807 | -0.0081 | 0.0129 | 13/20 |
+| L9 | 6.811 | 6.818 | 0.0047 | 6.813 | 6.826 | +0.0195 | 0.0097 | 0/20 |
+| ALL | 1.451 | 1.454 | 0.0053 | 1.443 | 1.463 | -5.3441 | 0.0086 | 20/20 |
+
+Largest min-max spread of one model's MAE: 0.0657 min (L5).
+
+### Results, relative noise 1e-9 (10 runs)
+
+| model | reference MAE | mean | SD | min | max | effect vs corrected (mean) | paired SD | runs lower |
+|---|---|---|---|---|---|---|---|---|
+| corrected | 6.817 | 6.798 | 0.0063 | 6.787 | 6.808 | (reference) | | |
+| L1 | 3.332 | 3.329 | 0.0051 | 3.317 | 3.335 | -3.4690 | 0.0081 | 10/10 |
+| L2 | 2.706 | 2.691 | 0.0169 | 2.672 | 2.728 | -4.1066 | 0.0184 | 10/10 |
+| L3 | 6.368 | 6.372 | 0.0086 | 6.360 | 6.382 | -0.4262 | 0.0100 | 10/10 |
+| L4 | 6.766 | 6.772 | 0.0152 | 6.753 | 6.806 | -0.0256 | 0.0173 | 9/10 |
+| L5 | 4.372 | 4.369 | 0.0220 | 4.336 | 4.396 | -2.4288 | 0.0231 | 10/10 |
+| L6 | 6.801 | 6.802 | 0.0055 | 6.793 | 6.809 | +0.0036 | 0.0075 | 3/10 |
+| L7 | 2.153 | 2.139 | 0.0031 | 2.133 | 2.142 | -4.6594 | 0.0073 | 10/10 |
+| L8 | 6.797 | 6.793 | 0.0140 | 6.774 | 6.826 | -0.0049 | 0.0165 | 7/10 |
+| L9 | 6.811 | 6.819 | 0.0048 | 6.815 | 6.829 | +0.0205 | 0.0089 | 0/10 |
+| ALL | 1.451 | 1.453 | 0.0056 | 1.446 | 1.465 | -5.3445 | 0.0082 | 10/10 |
+
+Largest min-max spread: 0.0597 min (L5).
+
+### Old vs new build: effect relative to the corrected model
+
+Computed from the rounded MAEs, so about +/-0.001.
+
+| Leak | Effect, old build | Effect, new build | Moved by |
+|---|---|---|---|
+| L1 | -3.474 | -3.485 | 0.011 |
+| L2 | -4.119 | -4.111 | 0.008 |
+| L3 | -0.441 | -0.449 | 0.008 |
+| L5 | -2.447 | -2.445 | 0.002 |
+| L7 | -4.663 | -4.664 | 0.001 |
+| ALL | -5.358 | -5.366 | 0.008 |
+| L4 | -0.033 | -0.051 | 0.018 |
+| L6 | -0.005 | -0.016 | 0.011 |
+| L8 | -0.008 | -0.020 | 0.012 |
+| L9 | -0.003 | -0.006 | 0.003 |
+
+### Reading
+
+| Observation | Detail |
+|---|---|
+| Size of the jitter | SD of one model's MAE under feature noise: 0.003 to 0.018 min. This matches the 0.0157 shift between two builds |
+| Noise size | 1e-9 gives a similar spread to 1e-13 (SD 0.003-0.022 vs 0.003-0.018; only 10 runs at 1e-9) |
+| Clear effects (sign in 30/30 runs, 30 or more times the paired SD for the smallest) | L1, L2, L3, L5, L7, ALL |
+| L4 | Small gain, mean -0.029 (1e-13) and -0.026 (1e-9) min, 20/20 and 9/10 runs lower; about 1.5-2.2 times the paired SD: borderline |
+| L9 | Consistently slightly worse: mean +0.020 min, 0/30 runs lower; about 2 times the paired SD |
+| L6, L8 | Not distinguishable from zero (5/20, 3/10 and 13/20, 7/10 runs lower) |
+| Scope | Offline scores only. Production conditions not covered: production verdicts near zero (L4, L5, L6, L8, L9) remain unresolved. Production effects of L1, L2, L3, L7, ALL (+1.1 to +2.3 min) are tens of times the jitter |
+| Rule of thumb used | A difference is read as real if its sign is the same in nearly all runs and it is about twice the paired SD or more. Chosen by the author, not a statistical test |
+| Reporting | Quote MAE with the jitter SD, e.g. corrected 6.82 min (SD 0.007). Three sources of uncertainty: test sampling (bootstrap), feature jitter (this study), and not studied: other splits, months, model seeds |
+
+### Superseded interpretations
+
+| Earlier statement | Now |
+|---|---|
+| "L4's MAE change is statistically detectable [-0.050, -0.015]" (single build, bootstrap only) | Very small (about 0.03 min, 2 s) and borderline relative to jitter; consistent sign in 29 of 30 refits |
+| "L6, L8, L9 are indistinguishable from zero" | Confirmed for L6 and L8. L9 shows a consistent small increase in error (0/30 runs lower) that the bootstrap, which covers test sampling only, could not reveal |
+| "L8 production verdict worse (borderline)" | Unresolved; production conditions not covered by the study |
+
+### Hypotheses (untested)
+
+| Hypothesis | Basis | Test |
+|---|---|---|
+| The sensitivity comes from tie-breaking: noise separates exactly equal feature values and moves histogram bin edges | The spread does not depend on the noise size (1e-13 vs 1e-9) | Round the sum-based features to 1e-6 and repeat the study |
+| L9 slightly hurts the fit because it adds a weakly informative feature | Sign consistent in 30/30 refits | Not planned |
+| The deterministic build is systematically different from the perturbed runs | Its MAE lies just outside the min-max of the 20 runs for 3 of 11 models (corrected, L7, L9); chance alone gives about 1 of 11 | Inconclusive, no test planned |

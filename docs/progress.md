@@ -42,6 +42,7 @@
 - [ ] Final clean-install test + release
 
 ## Advanced (after MVP)
+- [x] Sensitivity of scores to float-level feature noise (offline only; production conditions not covered)
 - [ ] Feature dependency analysis
 - [ ] Sensitivity of results to the simulated availability lags (0, 2, 5 min)
 - [ ] Feast comparison
