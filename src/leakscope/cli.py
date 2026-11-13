@@ -5,6 +5,7 @@
   pipeline    build the database from the raw data in the config
   audit       audit the feature registry (findings with explanations + scorecard)
   experiment  leaky-vs-corrected ML comparison, uncertainty, production conditions
+  sensitivity how far scores move under float-level noise in the features
   report      build results/report.md, results/audit_report.json and the figures
 
 Run from the project root (the feature registry is read from configs/features.yaml).
@@ -137,6 +138,18 @@ def report(
     from leakscope.reporting import build_report
     build_report(str(config), str(out), str(assets))
 
+@app.command()
+@guarded
+def sensitivity(
+    config: Config = DEFAULT_CONFIG,
+    out: Annotated[Path, typer.Option("--out", help="Results folder.")] = Path("results"),
+    n_runs: Annotated[int, typer.Option(help="Perturbed refits of every model.")] = 20,
+    rel: Annotated[float, typer.Option(help="Relative size of the noise.")] = 1e-13,
+):
+    """How far do scores move when sum-based features change at float-noise level?"""
+    _need(config)
+    from leakscope.sensitivity import run_sensitivity
+    run_sensitivity(str(config), str(out), n_runs=n_runs, rel=rel)
 
 @app.command()
 @guarded
