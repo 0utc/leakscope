@@ -1,0 +1,18 @@
+{
+  "hardware": "Lenovo IdeaPad 1 14ADA05, AMD 3020e (2 cores), 4 GB RAM, Windows 11 Pro; work files on an external SSD",
+  "sizes": [
+    10000,
+    50000,
+    200000
+  ],
+  "runs": 3,
+  "trips_per_example": 2,
+  "n_boot": 500,
+  "duckdb_memory_limit": "1GB",
+  "duckdb_threads": 2,
+  "python": "3.13.11",
+  "sklearn": "1.9.1",
+  "duckdb": "2.0.0",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "cpu_count": 2
+}

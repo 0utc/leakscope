@@ -582,3 +582,34 @@ Computed from the rounded MAEs, so about +/-0.001.
 | Statistics | 3 runs per size, interleaved across sizes; median, min, max and the first run's total are reported |
 | Hardware | Lenovo IdeaPad 1 14ADA05, AMD 3020e (2 cores), 4 GB RAM, Windows 11 Pro; DuckDB limited to 1 GB and 2 threads by `configs/taxi.yaml` |
 | Limitations (known before running) | Synthetic data with 60 zones, so window sizes differ from the real data; one machine; the OS file cache is not cleared between runs, so "cold" means a cold process, not a cold disk |
+
+### Benchmark results (synthetic data, 3 runs per size, median [min-max])
+
+Hardware as stated in `results/benchmark_info.json`: Lenovo IdeaPad 1 14ADA05, AMD 3020e (2 cores), 4 GB RAM, Windows 11 Pro, work files on an external SSD. Files: `results/benchmark_runs.csv`, `benchmark_summary.csv`, `benchmark_info.json`.
+
+| Examples | Clean trips | Pipeline s | Audit s | ML s | Total s | Peak MiB | First run total s |
+|---|---|---|---|---|---|---|---|
+| 10,000 | 19,928 | 1.6 [1.6-1.7] | 1.1 [1.1-1.2] | 21.9 [21.6-22.0] | 24.7 [24.4-24.7] | 226 [226-226] | 24.4 |
+| 50,000 | 99,640 | 3.6 [3.6-3.6] | 2.1 [2.1-2.1] | 32.5 [32.2-35.3] | 38.2 [37.9-41.0] | 264 [264-265] | 37.9 |
+| 200,000 | 398,557 | 6.8 [6.7-6.8] | 5.0 [5.0-5.3] | 73.9 [73.5-75.1] | 85.7 [85.5-86.8] | 434 [425-434] | 85.5 |
+
+### Reading
+
+| Observation | Detail |
+|---|---|
+| ML dominates the runtime | 89% of the total at 10k, 85% at 50k, 86% at 200k (ML median / total median) |
+| Growth is sublinear in the total | 20x more examples gives 3.5x the total time (24.7 s to 85.7 s). Pipeline grows 4.3x (1.6 s to 6.8 s) and audit 4.5x (1.1 s to 5.0 s) |
+| Large fixed ML cost | 21.9 s at 10k already. Untested explanation: the ML stage fits many models (the 11 experiments, the same 11 again for the production analysis, plus the ablation fits), each with 200 boosting iterations, and that cost depends only weakly on the number of rows. Not measured per model in this study |
+| Memory | Peak working set 226, 264 and 434 MiB, far below the 4 GB of the machine. 20x more examples gives 1.9x the peak. Measured for the worker process only (whole run, cumulative); the parent process that generates the data is not included |
+| Run-to-run spread | Total time within 1.2% (10k), 8.2% (50k) and 1.5% (200k) of the median. The 50k spread comes from one slower ML stage (35.3 s vs 32.2-32.5 s); cause unknown |
+| Cold start | The first run was not slower than the median at any size (24.4 vs 24.7, 37.9 vs 38.2, 85.5 vs 85.7). So no cold-start penalty is visible. Caveat: "cold" means a fresh process; the OS file cache was not cleared, and the data files were written just before each run |
+| Not comparable | The earlier real-data pipeline timing (29.4 s, 2.9M trips, 100k examples) is a different setup: real data with ~260 zones against 60 synthetic zones, and a different size definition |
+
+### Limitations
+
+| Limitation | Detail |
+|---|---|
+| Three runs per size | Min and max over 3 runs show spread, not a confidence interval |
+| One machine, one power setting | Results describe this laptop only |
+| Synthetic data | 60 zones, so lookback windows pool more trips than on the real data |
+| Larger sizes untested | 200k examples was the maximum; no extrapolation beyond it |

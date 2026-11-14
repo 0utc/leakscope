@@ -36,7 +36,7 @@
 - [x] CLI
 - [x] Synthetic demo data + one-command demo
 - [x] CI + robustness tests
-- [ ] Benchmarks (10k/50k/200k)
+- [x] Benchmarks (10k/50k/200k)
 - [ ] README, docs, charts, demo
 - [ ] LaTeX report
 - [ ] Final clean-install test + release
