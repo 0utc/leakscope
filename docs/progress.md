@@ -38,9 +38,11 @@
 - [x] CI + robustness tests
 - [x] Benchmarks (10k/50k/200k)
 - [x] README
+- [x] Final clean-install test (fresh clone, venv, tests, demo)
+- [ ] Release (tag v0.1.0 after the LaTeX report)
 - [ ] docs polish, extra charts, demo recording
 - [ ] LaTeX report
-- [ ] Final clean-install test + release
+
 
 ## Advanced (after MVP)
 - [x] Sensitivity of scores to float-level feature noise (offline only; production conditions not covered)

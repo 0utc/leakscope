@@ -653,3 +653,30 @@ Hardware as stated in `results/benchmark_info.json`: Lenovo IdeaPad 1 14ADA05, A
 |---|---|
 | Files | `assets/screenshots/p4_benchmark_summary.png` (terminal summary of the benchmark run), `assets/screenshots/p4_report_uncertainty.png` (rendered section 2.4 of the report) |
 | Purpose | Evidence of the actual runs on the laptop; not referenced in the README, which uses a text excerpt instead |
+
+### Clean-install test
+
+| Item | Detail |
+|---|---|
+| Procedure | Fresh `git clone` from GitHub into a new folder, new venv, `pip install -e ".[dev]"` as in the README, then `pytest -q -rs` and `python -m leakscope demo`. Windows 11, Python 3.13.11 |
+| Installed | scikit-learn 1.9.1, DuckDB 2.0.0, pandas 3.1.1, numpy 2.5.4, pandera 0.36.0, typer 0.29.1 (full `pip list` checked; nothing unexpected). Versions are not pinned in `pyproject.toml` |
+| Tests | 102 passed, 9 skipped in 157 s. All 9 skips are "local database not built" (6 in `test_conformance.py`, 1 each in `test_evaluation.py`, `test_scorecard.py`, `test_temporal_join.py`), the same as CI |
+| Demo | Six stages completed in 38 s, 19/19 exact rule-set match, conformance conforms, M1 caught by the conformance check. `leakscope audit --config demo_work/demo.yaml --no-explain` gave the same verdict |
+| Demo report structure | `demo_results/report.md` has Summary, sections 1 to 4 and subsection 2.4; no Performance section; 2.4 states that the float-noise study was not measured in that run (optional-file logic works) |
+| Repository state | `git status` clean after the demo: generated folders are gitignored |
+| Result | No defect found; the README quick start works as written on a clean clone |
+
+### Observations (not explained)
+
+| Observation | Status |
+|---|---|
+| In the synthetic demo, the L3 ablation shows no shrinkage (-3.1% without pickup_hour and in the full experiment); on real data it shrank from -6.6% to -1.7% | Synthetic data has a different structure; not investigated. Demo numbers should not be compared with the real ones |
+| Demo L6: offline RMSE clearly higher than the corrected model (n=20,000 examples, 500 resamples), MAE not distinguishable | Synthetic data only; not investigated |
+
+### Limits of this test
+
+| Limit | Detail |
+|---|---|
+| One platform | Windows 11 only; Ubuntu is covered by CI, not by this manual test |
+| Real-data path | The clean clone has no `data/`, so the real-data pipeline and the 9 database tests were not exercised here |
+| Dependency versions | Latest versions at install time; an install at another date may differ |
