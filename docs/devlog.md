@@ -567,3 +567,18 @@ Computed from the rounded MAEs, so about +/-0.001.
 | The sensitivity comes from tie-breaking: noise separates exactly equal feature values and moves histogram bin edges | The spread does not depend on the noise size (1e-13 vs 1e-9) | Round the sum-based features to 1e-6 and repeat the study |
 | L9 slightly hurts the fit because it adds a weakly informative feature | Sign consistent in 30/30 refits | Not planned |
 | The deterministic build is systematically different from the perturbed runs | Its MAE lies just outside the min-max of the 20 runs for 3 of 11 models (corrected, L7, L9); chance alone gives about 1 of 11 | Inconclusive, no test planned |
+
+## 2026-11-14
+
+### Benchmark design (runtime and peak memory)
+
+| Item | Detail |
+|---|---|
+| Code | `src/leakscope/benchmark.py`, `python -m leakscope benchmark`, `tests/test_benchmark.py` |
+| Size definition | Number of prediction examples (10,000, 50,000, 200,000); the synthetic data has 2 x as many trips. Chosen by the author; the real-data timings in earlier entries (2.9M trips, 100k examples) are a different setup and are not compared |
+| Isolation | Every run is a fresh Python process, so interpreter, DuckDB and imports start cold; data generation runs in the parent and is not timed |
+| Timed stages | Pipeline (`run_all`), audit (`collect`), ML (`evaluation` + `analysis`, 500 bootstrap resamples); per-step pipeline times parsed from the `[ok]` lines |
+| Memory | Peak working set of the worker process (Windows API; `resource` elsewhere), read after each stage. Cumulative, so it never decreases within a run |
+| Statistics | 3 runs per size, interleaved across sizes; median, min, max and the first run's total are reported |
+| Hardware | Lenovo IdeaPad 1 14ADA05, AMD 3020e (2 cores), 4 GB RAM, Windows 11 Pro; DuckDB limited to 1 GB and 2 threads by `configs/taxi.yaml` |
+| Limitations (known before running) | Synthetic data with 60 zones, so window sizes differ from the real data; one machine; the OS file cache is not cleared between runs, so "cold" means a cold process, not a cold disk |

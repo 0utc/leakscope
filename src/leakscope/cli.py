@@ -6,6 +6,7 @@
   audit       audit the feature registry (findings with explanations + scorecard)
   experiment  leaky-vs-corrected ML comparison, uncertainty, production conditions
   sensitivity how far scores move under float-level noise in the features
+  benchmark   runtime and peak memory at several sizes (median of repeated runs)
   report      build results/report.md, results/audit_report.json and the figures
 
 Run from the project root (the feature registry is read from configs/features.yaml).
@@ -150,6 +151,22 @@ def sensitivity(
     _need(config)
     from leakscope.sensitivity import run_sensitivity
     run_sensitivity(str(config), str(out), n_runs=n_runs, rel=rel)
+
+@app.command()
+@guarded
+def benchmark(
+    sizes: Annotated[str, typer.Option(help="Comma-separated numbers of examples.")]
+    = "10000,50000,200000",
+    runs: Annotated[int, typer.Option(help="Repetitions per size (the median is reported).")] = 3,
+    out: Annotated[Path, typer.Option("--out", help="Results folder.")] = Path("results"),
+    work_dir: Annotated[Path, typer.Option(help="Private folder for the benchmark data.")]
+    = Path("bench_work"),
+):
+    """Runtime and peak memory of pipeline, audit and ML at several sizes (synthetic data)."""
+    _need(DEFAULT_CONFIG)
+    from leakscope.benchmark import run_benchmark
+    run_benchmark(sizes=tuple(int(s) for s in sizes.split(",")), runs=runs,
+                  out_dir=str(out), work_dir=str(work_dir))
 
 @app.command()
 @guarded
