@@ -33,13 +33,20 @@ def load_ml_results(results_dir="results"):
         raise FileNotFoundError(
             f"missing {missing} in {d}; run python -m leakscope.evaluation and "
             f"python -m leakscope.analysis first")
-    return dict(
+    ml = dict(
         comparison=pd.read_csv(d / "ml_comparison.csv"),
         uncertainty=pd.read_csv(d / "ml_uncertainty.csv"),
         production=pd.read_csv(d / "ml_production.csv"),
         ablation=pd.read_csv(d / "ml_ablation.csv"),
         info=json.loads((d / "ml_run_info.json").read_text(encoding="utf-8")))
-
+    # optional extras: the report is complete without them
+    if (d / "ml_sensitivity.csv").exists():
+        ml["sensitivity"] = pd.read_csv(d / "ml_sensitivity.csv")
+    if (d / "benchmark_summary.csv").exists() and (d / "benchmark_info.json").exists():
+        ml["benchmark"] = pd.read_csv(d / "benchmark_summary.csv")
+        ml["benchmark_info"] = json.loads(
+            (d / "benchmark_info.json").read_text(encoding="utf-8"))
+    return ml
 
 def _scenario_order(row):
     s = row["scenario"]
@@ -180,6 +187,160 @@ def _fmt(x):
 OFFLINE_WORDS = {"better": "clearly lower", "worse": "clearly higher",
                  "no clear difference": "not distinguishable from 0"}
 
+# ------------------------------------------- precision, sensitivity, benchmark
+def sens_reading(row):
+    """Reading rule for one leaky model in the float-noise study (author's rule of
+    thumb, not a statistical test): the sign must be the same in at least 90% of the
+    runs; 'clear' if the mean effect is at least 10x the paired SD, 'borderline' if
+    2x to 10x, otherwise not distinguishable from zero."""
+    n, low = int(row["n_runs"]), int(row["runs_lower"])
+    d, sd = float(row["d_mean"]), float(row["d_std"])
+    consistent = low <= 0.1 * n or low >= 0.9 * n
+    ratio = abs(d) / sd if sd > 0 else float("inf")
+    if not consistent or ratio < 2:
+        return "not distinguishable from 0"
+    grade = "clear" if ratio >= 10 else "borderline"
+    return f"{grade}, " + ("lower error" if d < 0 else "higher error")
+
+
+def _sens_spread(sens):
+    """Largest min-to-max spread of one model's MAE across the refits, and whose it is."""
+    spans = sens["max_mae"] - sens["min_mae"]
+    return float(spans.max()), str(sens.loc[spans.idxmax(), "experiment"])
+
+
+def _precision_bullet(ml):
+    sens = ml.get("sensitivity")
+    if sens is None:
+        return ("- **Precision:** the intervals cover test-set sampling only; the other "
+                "sources of uncertainty are listed in section 2.4.")
+    spread, _ = _sens_spread(sens)
+    ref = sens.iloc[0]
+    return (f"- **Precision:** refitting after float-level noise in the features moves a "
+            f"model's MAE by up to {spread:.3f} min. Quote the honest model as "
+            f"{ref['reference_mae']:.3f} min (jitter SD {ref['std_mae']:.3f}); differences "
+            f"between models below {spread:.3f} min are not interpretable. Other splits, "
+            f"months and model seeds were not studied (section 2.4).")
+
+
+def _sensitivity_block(sens, prod):
+    n, rel = int(sens["n_runs"].iloc[0]), float(sens["relative_noise"].iloc[0])
+    spread, widest = _sens_spread(sens)
+    ref = sens.iloc[0]
+    outside = int(((sens["reference_mae"] < sens["min_mae"])
+                   | (sens["reference_mae"] > sens["max_mae"])).sum())
+    body = []
+    for i, r in sens.iterrows():
+        if i == 0:
+            tail = ["(reference)", "", "", "-"]
+        else:
+            tail = [f"{r['d_mean']:+.3f}", f"{r['d_std']:.4f}",
+                    f"{int(r['runs_lower'])}/{int(r['n_runs'])}", sens_reading(r)]
+        body.append([r["experiment"], f"{r['reference_mae']:.3f}", f"{r['mean_mae']:.3f}",
+                     f"{r['std_mae']:.4f}", f"{r['min_mae']:.3f} to {r['max_mae']:.3f}"]
+                    + tail)
+    small = prod[prod["d_mae"].abs() < spread]["scenario"].tolist()
+    prod_text = ("Production conditions were not covered by this study."
+                 + (f" The production differences for {', '.join(small)} are smaller than "
+                    f"that spread, so their verdicts in section 2.2 stay unresolved."
+                    if small else ""))
+    parts = [
+        f"**Float-noise study (offline scores only).** Every model was refitted {n} times "
+        f"after multiplying the sum-based features by (1 + {rel:g} x N(0, 1)); the model "
+        f"seed and the split were fixed. Errors in minutes.\n",
+        md_table(["Experiment", "Reference MAE", "Mean of refits", "SD", "Min to max",
+                  "Effect vs corrected (mean)", "Paired SD", "Runs lower", "Reading"],
+                 body) + "\n",
+        "Reading rule, chosen by the author and not a statistical test: an effect counts "
+        "only if its sign is the same in at least 90% of the refits; it is *clear* if the "
+        "mean effect is at least 10 times the paired SD, *borderline* if 2 to 10 times, and "
+        "otherwise not distinguishable from zero. Borderline readings sit close to the "
+        "threshold and should not be over-interpreted.\n",
+        f"The largest min-to-max spread of one model's MAE across the refits is "
+        f"{spread:.3f} min ({widest}); differences between models of that order cannot be "
+        f"interpreted. Quote the corrected model as {ref['reference_mae']:.3f} min "
+        f"(jitter SD {ref['std_mae']:.3f}). The reported MAE (unperturbed build) lies "
+        f"outside the refits' min-to-max range for {outside} of {len(sens)} models; the "
+        f"cause was not investigated. {prod_text}\n",
+    ]
+    return "\n".join(parts)
+
+
+def _uncertainty_section(ml):
+    sens, prod = ml.get("sensitivity"), ml["production"]
+    if sens is not None:
+        spread, widest = _sens_spread(sens)
+        sd_lo, sd_hi = float(sens["std_mae"].min()), float(sens["std_mae"].max())
+        second = (f"2. **Float-level feature noise (measured, offline only).** Refitting "
+                  f"after tiny noise in the sum-based features moves one model's MAE with a "
+                  f"standard deviation of {sd_lo:.3f} to {sd_hi:.3f} min (largest "
+                  f"min-to-max spread {spread:.3f} min).")
+    else:
+        second = ("2. **Float-level feature noise (not measured in this run).** "
+                  "`python -m leakscope sensitivity` measures it; no results file was found.")
+    items = [
+        "1. **Test sampling (measured).** The 95% intervals in sections 2.1 to 2.3 come "
+        "from an hour-block bootstrap of one test week.",
+        second,
+        "3. **Not studied.** Other chronological splits, other months, other model seeds "
+        "and model classes, and real (not simulated) availability lags. Any of them could "
+        "change the numbers.",
+    ]
+    parts = [
+        "### 2.4 How precise are these numbers?\n",
+        "Every MAE in this report is uncertain in at least three ways, and only the first "
+        "two were measured:\n",
+        "\n".join(items) + "\n",
+        "The intervals in sections 2.1 to 2.3 describe the first source only, so the full "
+        "uncertainty is wider than they suggest.\n",
+    ]
+    if sens is not None:
+        parts.append(_sensitivity_block(sens, prod))
+    return "\n".join(parts)
+
+
+def _span(row, m, digits=1):
+    return (f"{row[m + '_median']:.{digits}f} "
+            f"({row[m + '_min']:.{digits}f} to {row[m + '_max']:.{digits}f})")
+
+
+def _benchmark_section(bench, info, number):
+    b = bench.sort_values("n_examples").reset_index(drop=True)
+    body = [[f"{int(r['n_examples']):,}", f"{int(r['n_clean_trips']):,}",
+             _span(r, "pipeline_s"), _span(r, "audit_s"), _span(r, "ml_s"),
+             _span(r, "total_s"), _span(r, "peak_mb", 0), f"{r['total_s_first_run']:.1f}"]
+            for _, r in b.iterrows()]
+    first, last = b.iloc[0], b.iloc[-1]
+    ml_share = 100 * b["ml_s_median"] / b["total_s_median"]
+    cold = 100 * (b["total_s_first_run"] - b["total_s_median"]) / b["total_s_median"]
+    out = [
+        f"## {number}. Performance\n",
+        f"Runtime and peak memory of the whole workflow on synthetic data "
+        f"({info['trips_per_example']} trips per prediction example), measured on: "
+        f"{info['hardware']}. DuckDB was limited to {info['duckdb_memory_limit']} and "
+        f"{info['duckdb_threads']} threads. {info['runs']} runs per size, each in a fresh "
+        f"Python process; cells show the median (min to max). Pipeline = cleaning to "
+        f"scenario features; audit = all rules plus the conformance check; ML = the "
+        f"experiments plus bootstrap, production and ablation analysis "
+        f"({info['n_boot']} resamples).\n",
+        md_table(["Examples", "Clean trips", "Pipeline s", "Audit s", "ML s", "Total s",
+                  "Peak MiB", "First run total s"], body) + "\n",
+        f"- ML is {ml_share.min():.0f}% to {ml_share.max():.0f}% of the total time.",
+        f"- {last['n_examples'] / first['n_examples']:.0f}x more examples gave "
+        f"{last['total_s_median'] / first['total_s_median']:.1f}x the total time and "
+        f"{last['peak_mb_median'] / first['peak_mb_median']:.1f}x the peak memory.",
+        f"- The first run's total differed from the median by {cold.min():+.1f}% to "
+        f"{cold.max():+.1f}%; no cold-start penalty is visible. \"Cold\" means a fresh "
+        f"process: the operating system's file cache was not cleared.",
+        "- Peak MiB is the peak working set of the measured process over the whole run "
+        "(cumulative); data generation is not included.",
+        f"- Limits: {info['runs']} runs per size (min and max show spread, not a "
+        f"confidence interval), one machine and power setting, synthetic data with 60 "
+        f"zones, and sizes up to {int(last['n_examples']):,} examples. The timings are not "
+        f"comparable with the real-data pipeline timings in the devlog, which use a "
+        f"different data set and size definition.\n",
+    ]
+    return "\n".join(out)
 
 def render_markdown(audit, ml, figures, results_dir="results"):
     s, rows = audit["score"], audit["rows"]
@@ -222,7 +383,8 @@ def render_markdown(audit, ml, figures, results_dir="results"):
         f"{all_off['mae']:.3f} min ({100 * (all_off['mae'] - corrected['mae']) / corrected['mae']:+.1f}% "
         f"vs the honest model). When the leaked values are not available at prediction "
         f"time the same model scores {all_prod['mae']:.3f} min "
-        f"({100 * (all_prod['mae'] - corrected['mae']) / corrected['mae']:+.1f}% vs the honest model).\n")
+        f"({100 * (all_prod['mae'] - corrected['mae']) / corrected['mae']:+.1f}% vs the honest model).")
+    out.append(_precision_bullet(ml) + "\n")
     out.append(img(figures["offline_vs_production"]) + "\n")
     out.append("*Bars: MAE on the test week with 95% intervals (hour-block bootstrap). "
                "Dashed line: the corrected model. Dotted line: the constant-median "
@@ -316,6 +478,8 @@ def render_markdown(audit, ml, figures, results_dir="results"):
           _ci(r["d_mae"], r["d_mae_lo"], r["d_mae_hi"]), f"{r['d_mae_pct']:+.1f}",
           f"{r['main_d_mae_pct']:+.1f}%"] for _, r in abl.iterrows()]) + "\n")
 
+    out.append(_uncertainty_section(ml))
+
     out.append("## 3. Limitations and assumptions\n")
     for item in [
         "Availability times are simulated from configurable lags (`configs/taxi.yaml`), "
@@ -331,17 +495,29 @@ def render_markdown(audit, ml, figures, results_dir="results"):
         "Production conditions are a simulation with serving values chosen by us.",
         "Cleaning keeps trips of 1 to 180 minutes, so conclusions apply to that range."]:
         out.append(f"- {item}")
+    if ml.get("sensitivity") is not None:
+        out.append("- The float-noise study covers offline scores only; production "
+                   "verdicts close to zero are not resolved by it (section 2.4).")
     out.append("")
 
-    out.append("## 4. Reproducibility\n")
+    number = 4
+    if ml.get("benchmark") is not None:
+        out.append(_benchmark_section(ml["benchmark"], ml["benchmark_info"], number))
+        number += 1
+    out.append(f"## {number}. Reproducibility\n")
     out.append(md_table(
         ["Item", "Value"],
         [["Python", info["python"]], ["scikit-learn", info["sklearn"]],
          ["DuckDB", info["duckdb"]], ["Platform", info["platform"]],
          ["CPU count", info["cpu_count"]], ["Seed", info["seed"]]]) + "\n")
-    out.append("```\npython -m leakscope.pipeline\npython -m leakscope.audit_scoring\n"
-               "python -m leakscope.evaluation\npython -m leakscope.analysis\n"
-               "python -m leakscope.reporting\n```\n")
+    cmds = ["python -m leakscope.pipeline", "python -m leakscope.audit_scoring",
+            "python -m leakscope.evaluation", "python -m leakscope.analysis"]
+    if ml.get("sensitivity") is not None:
+        cmds.append("python -m leakscope.sensitivity")
+    if ml.get("benchmark") is not None:
+        cmds.append("python -m leakscope.benchmark")
+    cmds.append("python -m leakscope.reporting")
+    out.append("```\n" + "\n".join(cmds) + "\n```\n")
     return "\n".join(out)
 
 

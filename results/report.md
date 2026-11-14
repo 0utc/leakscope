@@ -7,6 +7,7 @@
 - **Audit:** 10 of 10 leaky features were flagged and 9 of 9 valid features were left alone (feature level: precision 1.000, recall 1.000; rule level: precision 1.000, recall 1.000). The scenarios were designed together with the auditor, so this shows that the implementation matches its specification, not that all leakage is caught (see section 3).
 - **Honest model:** MAE 6.817 min on the test week, against 7.787 for a constant-median baseline.
 - **Offline vs production:** with all leaky features the offline MAE is 1.451 min (-78.7% vs the honest model). When the leaked values are not available at prediction time the same model scores 8.471 min (+24.3% vs the honest model).
+- **Precision:** refitting after float-level noise in the features moves a model's MAE by up to 0.066 min. Quote the honest model as 6.817 min (jitter SD 0.007); differences between models below 0.066 min are not interpretable. Other splits, months and model seeds were not studied (section 2.4).
 
 ![fig_offline_vs_production.png](../assets/fig_offline_vs_production.png)
 
@@ -126,6 +127,36 @@ Serving values are simulated: missing for the trip's own outcome fields, the cor
 | L5 without N5 (safe 60-min average removed) | 6.797 | 6.586 | -0.212 [-0.256, -0.169] | -3.1 | -35.9% |
 | L3 without pickup_hour | 6.962 | 6.841 | -0.121 [-0.159, -0.085] | -1.7 | -6.6% |
 
+### 2.4 How precise are these numbers?
+
+Every MAE in this report is uncertain in at least three ways, and only the first two were measured:
+
+1. **Test sampling (measured).** The 95% intervals in sections 2.1 to 2.3 come from an hour-block bootstrap of one test week.
+2. **Float-level feature noise (measured, offline only).** Refitting after tiny noise in the sum-based features moves one model's MAE with a standard deviation of 0.003 to 0.018 min (largest min-to-max spread 0.066 min).
+3. **Not studied.** Other chronological splits, other months, other model seeds and model classes, and real (not simulated) availability lags. Any of them could change the numbers.
+
+The intervals in sections 2.1 to 2.3 describe the first source only, so the full uncertainty is wider than they suggest.
+
+**Float-noise study (offline scores only).** Every model was refitted 20 times after multiplying the sum-based features by (1 + 1e-13 x N(0, 1)); the model seed and the split were fixed. Errors in minutes.
+
+| Experiment | Reference MAE | Mean of refits | SD | Min to max | Effect vs corrected (mean) | Paired SD | Runs lower | Reading |
+|---|---|---|---|---|---|---|---|---|
+| corrected (valid features only) | 6.817 | 6.798 | 0.0073 | 6.778 to 6.808 | (reference) |  |  | - |
+| + L1 leak_trip_distance | 3.332 | 3.329 | 0.0050 | 3.317 to 3.339 | -3.469 | 0.0102 | 20/20 | clear, lower error |
+| + L2 leak_total_amount | 2.706 | 2.693 | 0.0139 | 2.673 to 2.716 | -4.106 | 0.0177 | 20/20 | clear, lower error |
+| + L3 leak_dropoff_hour | 6.368 | 6.372 | 0.0089 | 6.361 to 6.391 | -0.426 | 0.0131 | 20/20 | clear, lower error |
+| + L4 leak_zone_avg_global | 6.766 | 6.770 | 0.0098 | 6.755 to 6.791 | -0.029 | 0.0128 | 20/20 | borderline, lower error |
+| + L5 leak_zone_avg_60m_self | 4.372 | 4.361 | 0.0181 | 4.332 to 4.397 | -2.438 | 0.0182 | 20/20 | clear, lower error |
+| + L6 leak_zone_avg_60m_inprogress | 6.801 | 6.805 | 0.0071 | 6.789 to 6.822 | +0.006 | 0.0120 | 5/20 | not distinguishable from 0 |
+| + L7 leak_fare_correction | 2.153 | 2.138 | 0.0029 | 2.133 to 2.147 | -4.661 | 0.0077 | 20/20 | clear, lower error |
+| + L8 leak_snapshot_zone_avg | 6.797 | 6.790 | 0.0100 | 6.773 to 6.807 | -0.008 | 0.0129 | 13/20 | not distinguishable from 0 |
+| + L9 leak_last_fare_zone | 6.811 | 6.818 | 0.0047 | 6.813 to 6.826 | +0.020 | 0.0097 | 0/20 | borderline, higher error |
+| + ALL leaky features | 1.451 | 1.454 | 0.0053 | 1.443 to 1.463 | -5.344 | 0.0086 | 20/20 | clear, lower error |
+
+Reading rule, chosen by the author and not a statistical test: an effect counts only if its sign is the same in at least 90% of the refits; it is *clear* if the mean effect is at least 10 times the paired SD, *borderline* if 2 to 10 times, and otherwise not distinguishable from zero. Borderline readings sit close to the threshold and should not be over-interpreted.
+
+The largest min-to-max spread of one model's MAE across the refits is 0.066 min (+ L5 leak_zone_avg_60m_self); differences between models of that order cannot be interpreted. Quote the corrected model as 6.817 min (jitter SD 0.007). The reported MAE (unperturbed build) lies outside the refits' min-to-max range for 3 of 11 models; the cause was not investigated. Production conditions were not covered by this study. The production differences for L4, L5, L6, L8, L9 are smaller than that spread, so their verdicts in section 2.2 stay unresolved.
+
 ## 3. Limitations and assumptions
 
 - Availability times are simulated from configurable lags (`configs/taxi.yaml`), not observed. Results such as the share of rows flagged for L9 depend on them.
@@ -134,8 +165,25 @@ Serving values are simulated: missing for the trip's own outcome fields, the cor
 - One month of data, one chronological split (last 7 days) and one model class. The bootstrap covers test-set sampling, not training randomness or day-level variation.
 - Production conditions are a simulation with serving values chosen by us.
 - Cleaning keeps trips of 1 to 180 minutes, so conclusions apply to that range.
+- The float-noise study covers offline scores only; production verdicts close to zero are not resolved by it (section 2.4).
 
-## 4. Reproducibility
+## 4. Performance
+
+Runtime and peak memory of the whole workflow on synthetic data (2 trips per prediction example), measured on: Lenovo IdeaPad 1 14ADA05, AMD 3020e (2 cores), 4 GB RAM, Windows 11 Pro; work files on an external SSD. DuckDB was limited to 1GB and 2 threads. 3 runs per size, each in a fresh Python process; cells show the median (min to max). Pipeline = cleaning to scenario features; audit = all rules plus the conformance check; ML = the experiments plus bootstrap, production and ablation analysis (500 resamples).
+
+| Examples | Clean trips | Pipeline s | Audit s | ML s | Total s | Peak MiB | First run total s |
+|---|---|---|---|---|---|---|---|
+| 10,000 | 19,928 | 1.6 (1.6 to 1.7) | 1.1 (1.1 to 1.2) | 21.9 (21.6 to 22.0) | 24.7 (24.4 to 24.7) | 226 (226 to 226) | 24.4 |
+| 50,000 | 99,640 | 3.6 (3.6 to 3.6) | 2.1 (2.1 to 2.1) | 32.5 (32.2 to 35.3) | 38.2 (37.9 to 41.0) | 264 (264 to 265) | 37.9 |
+| 200,000 | 398,557 | 6.8 (6.7 to 6.8) | 5.0 (5.0 to 5.3) | 73.9 (73.5 to 75.1) | 85.7 (85.5 to 86.8) | 434 (425 to 434) | 85.5 |
+
+- ML is 85% to 89% of the total time.
+- 20x more examples gave 3.5x the total time and 1.9x the peak memory.
+- The first run's total differed from the median by -1.1% to -0.1%; no cold-start penalty is visible. "Cold" means a fresh process: the operating system's file cache was not cleared.
+- Peak MiB is the peak working set of the measured process over the whole run (cumulative); data generation is not included.
+- Limits: 3 runs per size (min and max show spread, not a confidence interval), one machine and power setting, synthetic data with 60 zones, and sizes up to 200,000 examples. The timings are not comparable with the real-data pipeline timings in the devlog, which use a different data set and size definition.
+
+## 5. Reproducibility
 
 | Item | Value |
 |---|---|
@@ -151,5 +199,7 @@ python -m leakscope.pipeline
 python -m leakscope.audit_scoring
 python -m leakscope.evaluation
 python -m leakscope.analysis
+python -m leakscope.sensitivity
+python -m leakscope.benchmark
 python -m leakscope.reporting
 ```

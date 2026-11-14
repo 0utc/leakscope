@@ -613,3 +613,17 @@ Hardware as stated in `results/benchmark_info.json`: Lenovo IdeaPad 1 14ADA05, A
 | One machine, one power setting | Results describe this laptop only |
 | Synthetic data | 60 zones, so lookback windows pool more trips than on the real data |
 | Larger sizes untested | 200k examples was the maximum; no extrapolation beyond it |
+
+## 2026-11-14 (continued)
+
+### Report: benchmark, float-noise sensitivity and uncertainty wording
+
+| Item | Detail |
+|---|---|
+| Change | `reporting.py` now adds a Precision bullet to the summary, section 2.4 "How precise are these numbers?" (three sources of uncertainty, plus the float-noise table), and a Performance section (benchmark table) |
+| Optional inputs | `ml_sensitivity.csv`, `benchmark_summary.csv` + `benchmark_info.json`. Without them the report still builds (demo and CI); section 2.4 then says the noise study was not measured in that run, and section numbering stays 1-4 |
+| Computed from data | Every number and every reading in the new sections comes from the result files: SD range, largest spread, the models whose reported MAE lies outside the refits' range, the "production differences smaller than the spread" list, the ML share of runtime, growth factors and the first-run difference |
+| Reading rule | Sign in at least 90% of refits; clear if mean effect >= 10 x paired SD, borderline if 2 to 10 x, otherwise not distinguishable from 0. Chosen by the author, not a statistical test. L4 (ratio 2.25) and L9 (2.01) are near the borderline threshold |
+| Tests | `tests/test_reporting.py`: reading rule edge cases, report without extras, report with extras (including determinism), optional file loading |
+| Wording rule | Quote MAE with the jitter SD (corrected 6.817 min, SD 0.007); differences below the largest spread (0.066 min) are not interpretable; the intervals in 2.1-2.3 cover test sampling only |
+| Open | The float-noise study is offline only; production verdicts near zero (L4, L5, L6, L8, L9) stay unresolved. 10 refits at 1e-9 (devlog 2026-11-13) are not in the report because that file was not kept |
