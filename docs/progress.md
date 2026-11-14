@@ -37,7 +37,8 @@
 - [x] Synthetic demo data + one-command demo
 - [x] CI + robustness tests
 - [x] Benchmarks (10k/50k/200k)
-- [ ] README, docs, charts, demo
+- [x] README
+- [ ] docs polish, extra charts, demo recording
 - [ ] LaTeX report
 - [ ] Final clean-install test + release
 

@@ -627,3 +627,22 @@ Hardware as stated in `results/benchmark_info.json`: Lenovo IdeaPad 1 14ADA05, A
 | Tests | `tests/test_reporting.py`: reading rule edge cases, report without extras, report with extras (including determinism), optional file loading |
 | Wording rule | Quote MAE with the jitter SD (corrected 6.817 min, SD 0.007); differences below the largest spread (0.066 min) are not interpretable; the intervals in 2.1-2.3 cover test sampling only |
 | Open | The float-noise study is offline only; production verdicts near zero (L4, L5, L6, L8, L9) stay unresolved. 10 refits at 1e-9 (devlog 2026-11-13) are not in the report because that file was not kept |
+
+### README
+
+| Item | Detail |
+|---|---|
+| Content | Summary with the offline-vs-production figure, main results table, rule table, scorecard excerpt, quick start (`demo`), data download section, command table, performance table, limitations, repository layout, documentation links |
+| Design choices | Two badges only (CI, Python version); no emoji or decorative icons; the scorecard is a text block, not a screenshot; the two existing report figures are reused |
+| Numbers | Copied by hand from `results/report.md` and the benchmark and sensitivity results; they must be updated by hand if the experiments are re-run |
+| Open | No LICENSE file yet; README sections for the LaTeX report and the final clean-install test are added when those items are done |
+
+### Figure review and license
+
+| Item | Detail |
+|---|---|
+| Figure review | Both report figures checked against the result files: every bar, line and label matches (`ml_uncertainty.csv`, `ml_production.csv`, `ml_comparison.csv`). No change to the figures |
+| Caveat added to README | The four points near zero in the flagged-vs-effect figure (L4, L6, L8, L9; at most 0.051 min) are below the 0.066 min float-noise spread, so their order is not interpretable |
+| Repository issue found | The two PNGs in `assets/` had never been committed, so the images referenced by `report.md` and the README would have been broken on GitHub. Fixed in the same commit as the README |
+| License | MIT, code only; the TLC data is not redistributed. `pyproject.toml` license metadata left unchanged on purpose |
+| Correction | The README entry above says "No LICENSE file yet": superseded by this entry |
