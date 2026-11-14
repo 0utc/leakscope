@@ -646,3 +646,10 @@ Hardware as stated in `results/benchmark_info.json`: Lenovo IdeaPad 1 14ADA05, A
 | Repository issue found | The two PNGs in `assets/` had never been committed, so the images referenced by `report.md` and the README would have been broken on GitHub. Fixed in the same commit as the README |
 | License | MIT, code only; the TLC data is not redistributed. `pyproject.toml` license metadata left unchanged on purpose |
 | Correction | The README entry above says "No LICENSE file yet": superseded by this entry |
+
+### Screenshots
+
+| Item | Detail |
+|---|---|
+| Files | `assets/screenshots/p4_benchmark_summary.png` (terminal summary of the benchmark run), `assets/screenshots/p4_report_uncertainty.png` (rendered section 2.4 of the report) |
+| Purpose | Evidence of the actual runs on the laptop; not referenced in the README, which uses a text excerpt instead |
