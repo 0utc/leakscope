@@ -680,3 +680,38 @@ Hardware as stated in `results/benchmark_info.json`: Lenovo IdeaPad 1 14ADA05, A
 | One platform | Windows 11 only; Ubuntu is covered by CI, not by this manual test |
 | Real-data path | The clean clone has no `data/`, so the real-data pipeline and the 9 database tests were not exercised here |
 | Dependency versions | Latest versions at install time; an install at another date may differ |
+
+### LaTeX report
+
+| Item | Detail |
+|---|---|
+| Files | `report/leakscope_report.tex`, `report/references.bib`; compiled with MiKTeX (pdflatex + bibtex); figures read from `assets/` |
+| Structure | Abstract, Introduction, Related work, Method (rules, conformance check, point-in-time retrieval, scenarios), Experimental setup, Results (audit, offline, production, ablations, float noise, performance), Discussion and limitations, Conclusion and future work, Reproducibility, two appendices |
+| Numbers | Taken from `results/*.csv` and `results/report.md`, typed into the tables by hand; they must be updated by hand if the experiments are re-run |
+| References | Kaufman et al. 2012, Kapoor and Narayanan 2023, Bergmeir and Benitez 2012, Kunsch 1989, Raasveldt and Muehleisen 2019 checked by web search; Efron 1979 and the scikit-learn paper not searched. No feature-store paper cited (Feast comparison is future work) |
+| Correction during writing | A draft sentence gave the effect range of the seven features flagged on 100% of rows as -0.8% to -68.4%; the smallest is L8 at -0.3%. Fixed in the abstract and results |
+| Wording kept | Limitations as prominent as results; three sources of uncertainty; scenarios co-designed with the auditor; production conditions simulated |
+
+### LaTeX report: layout revision
+
+| Item | Detail |
+|---|---|
+| Requested changes | Separate title page; abstract and every section on a new page; contents page; list of figures; figure captions below only; a paragraph before each figure referring to it by number with a clickable link |
+| Implementation | TikZ title page (header band, timeline graphic, key figures); `\section` redefined to start a new page; tocloft for compact lists; hyperref `\autoref` for all references; `float` [H] for the two figures; the plot title baked into each PNG is cropped in LaTeX (21.1 bp), the PNG files are unchanged |
+| Verification | Compiled in a TeX Live sandbox (pdflatex + bibtex) with the real figures: 22 pages, no errors, pages inspected as images. The sandbox lacked lmodern, microtype and T1 fonts, so the final look on MiKTeX was not tested by the assistant |
+| Compile | pdflatex, bibtex, pdflatex x3 (the title-page overlay needs the extra pass) |
+| Open | List of Figures and List of Tables share one page (two figures only); benchmark table in a very small font |
+
+### LaTeX report: final form
+
+| Item | Detail |
+|---|---|
+| Files | `report/leakscope_report.tex`, `report/references.bib`, `report/leakscope_report.pdf` (18 pages in the assistant's test build; page count may differ slightly on MiKTeX) |
+| Layout decisions | Cover page, abstract page, contents, and a page with the lists of figures and tables; the body flows continuously; References and the appendices start on new pages. Table captions above tables, figure captions below figures (standard convention) |
+| Captions | Short names only (10 tables, 2 figures); details moved into the paragraphs before each table or figure, each of which cites it with a clickable link |
+| Figures | The plot title baked into each PNG is cropped in LaTeX (21.1 bp); the PNG files used by the README and `report.md` are unchanged |
+| Tables | Pinned in place with `[H]`, after a floating table split a paragraph; side effect: some pages end with 4 to 5 cm of white space |
+| Corrections during writing | The first draft gave the effect range of the seven features flagged on 100% of rows as -0.8% to -68.4%; the smallest is L8 at -0.3%. The rules table had no number or caption (now Table 1) |
+| Verification | Compiled with pdflatex + bibtex (3 passes) in a TeX Live sandbox and on MiKTeX; pages inspected as images; all citations and cross-references resolve |
+| References | Kaufman et al. 2012, Kapoor and Narayanan 2023, Bergmeir and Benitez 2012, Kunsch 1989, Raasveldt and Muehleisen 2019 checked by web search; Efron 1979 and the scikit-learn paper from memory, not searched |
+| Numbers | Typed into the tables by hand from `results/*.csv`; they must be updated by hand if the experiments are re-run |

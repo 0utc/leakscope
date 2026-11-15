@@ -18,3 +18,7 @@ demo_results/
 .coverage
 htmlcov/
 tmp_check/
+report/*.bbl
+report/*.blg
+report/*.out
+report/*.toc
