@@ -39,9 +39,9 @@
 - [x] Benchmarks (10k/50k/200k)
 - [x] README
 - [x] Final clean-install test (fresh clone, venv, tests, demo)
-- [ ] Release (tag v0.1.0 after the LaTeX report)
+- [x] LaTeX report
+- [x] Release (tag v0.1.0)
 - [ ] docs polish, extra charts, demo recording
-- [ ] LaTeX report
 
 
 ## Advanced (after MVP)

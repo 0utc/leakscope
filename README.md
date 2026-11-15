@@ -14,6 +14,8 @@ The worked example predicts NYC yellow-taxi trip duration at pickup time (Januar
 
 *MAE on the test week with 95% intervals. Offline, the leaky models look far better than the honest one. When the leaked value is not available at serving time, several of them become worse than the honest model.*
 
+**Full write-up:** [`report/leakscope_report.pdf`](report/leakscope_report.pdf) (technical report with method, results and limitations).
+
 ## Main results
 
 | | Result |
@@ -157,6 +159,7 @@ src/leakscope/
 tests/      unit, integration and end-to-end tests
 docs/       scope.md, data_dictionary.md, devlog.md, progress.md
 results/    report.md and the CSV/JSON results behind it
+report/     LaTeX source and PDF of the technical report
 ```
 
 ## Documentation
@@ -165,6 +168,7 @@ results/    report.md and the CSV/JSON results behind it
 - [`docs/devlog.md`](docs/devlog.md): lab notebook, including defects found and claims later corrected
 - [`docs/progress.md`](docs/progress.md): what is done and what is not
 - [`results/report.md`](results/report.md): the generated audit and experiment report
+- [`report/leakscope_report.pdf`](report/leakscope_report.pdf): the technical report (LaTeX source in `report/`)
 
 ## License
 
