@@ -715,3 +715,14 @@ Hardware as stated in `results/benchmark_info.json`: Lenovo IdeaPad 1 14ADA05, A
 | Verification | Compiled with pdflatex + bibtex (3 passes) in a TeX Live sandbox and on MiKTeX; pages inspected as images; all citations and cross-references resolve |
 | References | Kaufman et al. 2012, Kapoor and Narayanan 2023, Bergmeir and Benitez 2012, Kunsch 1989, Raasveldt and Muehleisen 2019 checked by web search; Efron 1979 and the scikit-learn paper from memory, not searched |
 | Numbers | Typed into the tables by hand from `results/*.csv`; they must be updated by hand if the experiments are re-run |
+
+## 2026-11-15
+
+### State at v0.1.0
+
+| Item | Detail |
+|---|---|
+| Released | v0.1.0 tagged and pushed; Phase 4 complete |
+| Deferred on purpose | Feature dependency analysis, sensitivity of all results to the simulated availability lags (0, 2 and 5 minutes), Feast comparison. Not started; the report lists them as future work |
+| Biggest open limitation | Availability times are simulated, so results such as the L9 flagged share depend on the assumed lags |
+| Known weaknesses | Dependencies are not pinned; numbers in the README, report and `report.md` are updated by hand; PDF preview on GitHub (check status) |
