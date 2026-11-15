@@ -726,3 +726,11 @@ Hardware as stated in `results/benchmark_info.json`: Lenovo IdeaPad 1 14ADA05, A
 | Deferred on purpose | Feature dependency analysis, sensitivity of all results to the simulated availability lags (0, 2 and 5 minutes), Feast comparison. Not started; the report lists them as future work |
 | Biggest open limitation | Availability times are simulated, so results such as the L9 flagged share depend on the assumed lags |
 | Known weaknesses | Dependencies are not pinned; numbers in the README, report and `report.md` are updated by hand; PDF preview on GitHub (check status) |
+
+### Tracker cleanup
+
+| Item | Detail |
+|---|---|
+| Closed | "docs polish": README, report, scope and devlog are complete for v0.1.0 |
+| Dropped | "extra charts": the two report figures and the tables cover the findings; more charts would not add information |
+| Deferred | Demo recording (terminal capture of `python -m leakscope demo` for the README); optional |

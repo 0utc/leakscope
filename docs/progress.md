@@ -41,7 +41,8 @@
 - [x] Final clean-install test (fresh clone, venv, tests, demo)
 - [x] LaTeX report
 - [x] Release (tag v0.1.0)
-- [ ] docs polish, extra charts, demo recording
+- [x] Docs polish (README, report, scope, devlog) for v0.1.0
+- [ ] Optional: demo recording for the README (deferred); no extra charts planned
 
 
 ## Advanced (after MVP)
